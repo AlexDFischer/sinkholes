@@ -1,8 +1,10 @@
 #!/bin/python3
+
 from datetime import datetime
 from math import log10
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 
 feet_per_meter = 3.28084 # everything is stored internally as meters, but allow the user to use feet if they want
 meters_per_foot = 0.3048
@@ -24,7 +26,7 @@ def depth_to_hex_color(depth):
     log_num = min(log_num, 1)
     # now log_num goes from 0 to 1
 
-    index = int(log_num * (ncolors - 1))
+    index = int(round(log_num * (ncolors - 1)))
     # make sure floating point weirdness doesn't screw us
     index = min(index, ncolors-1)
     index = max(index, 0)
@@ -64,7 +66,7 @@ class Sinkhole:
         else:
             raise ValueError(f'Error: `"units`" was \"{units}\", but the only allowed values are \"metric\" or \"imperial\".')
         
-        title = "sinkhole" # {:.1f}d".format(self.depth * unit_conversion)
+        title = "sinkhole {:.1f}d".format(self.depth * unit_conversion)
         if self.width != 0 and self.length != 0:
             title += " {:.1f}w {:.1f}l".format(self.width * unit_conversion, self.length * unit_conversion)
         
@@ -85,7 +87,7 @@ class Sinkhole:
                 "deleted": False,
                 "title": title,
                 "is_active": True,
-                "notes": f"elevation: {self.elevation * unit_conversion} {unit_str}\narea: {self.area*unit_conversion**2} {unit_str}^2",
+                "notes": f"elevation: {int(round(self.elevation * unit_conversion))} {unit_str}\narea: {self.area*unit_conversion**2} {unit_str}^2",
                 "latitude": self.lat,
                 "longitude": self.long,
                 "elevation": self.elevation,
