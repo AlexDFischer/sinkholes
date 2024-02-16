@@ -6,46 +6,56 @@ import earthpy.spatial as es
 import earthpy.plot as ep
 import rasterio as rio
 import richdem as rd
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 from pyrsgis import raster
+from units import unit
+from sinkhole import Sinkhole
 
-datasource, elevation = raster.read("lonesomeRidgeArea.tif")
+def exportGeoTif(input_filename, output_filename, colormap='inferno_r', alpha=0.7, show=False):
+    datasource, elevation = raster.read(input_filename)
+    elevation[elevation<0] = 0
+    hillshade = es.hillshade(elevation, azimuth=315, altitude=30)
 
-elevation[elevation<0] = 0
+    # make colormap without alpha channel, and scale it to be unsigned byte
+    ncolors = 256
+    color_array = plt.get_cmap(colormap)(range(ncolors))
+    color_array = color_array[:, :3] # remove the alpha channel
+    color_array = (color_array * 255).astype(np.uint8)
 
-hillshade = es.hillshade(elevation, azimuth=315, altitude=30)
+    # fill depressions, get difference, and get difference that is unsigned byte scaled 0-255
+    rich_dem = rd.rdarray(elevation, no_data=0)
+    diff = rd.FillDepressions(rich_dem) - rich_dem
+    max_diff = np.max(diff)
+    scaled_diff = (diff * 255 / max_diff).astype(np.uint8)
 
-rich = rd.rdarray(elevation, no_data=0)
-richFilled = rd.FillDepressions(rich)
+    # image to export and render
+    img = np.zeros(shape=(hillshade.shape[0], hillshade.shape[1], 3), dtype=np.ubyte)
+    for channel in range(3):
+        img[:, :, channel] = hillshade
 
-# make my own colormap with 0 being transparent
-ncolors = 256
-color_array = plt.get_cmap('inferno_r')(range(ncolors))
+    scaled_diff_colored = np.zeros_like(img)
+    scaled_diff_colored[:, :, :] = color_array[scaled_diff, :]
 
-# change alpha values
-color_array[0,3] = 0 # make this colormap be transparent for value 0
+    nonzero_diff_index = diff > 0
 
-# create a colormap object
-map_object = LinearSegmentedColormap.from_list(name='inferno_r_alpha',colors=color_array)
+    img[nonzero_diff_index, :] = scaled_diff_colored[nonzero_diff_index, :]
+    # img[nonzero_diff_index] += alpha * scaled_diff_colored[nonzero_diff_index]
 
-# register this new colormap with matplotlib
-plt.colormaps.register(cmap=map_object)
+    # export geotiff TODO this runs out of memory, split up into multiple files
+    # raster.export(img, datasource, output_filename)
+
+    if show:
+        fig, ax = plt.subplots(figsize=(15, 9))
+        ax.imshow(img)
+        plt.colorbar(ScalarMappable(norm=Normalize(0, max_diff), cmap=colormap))
+        plt.show()
+
+def sinkholes_from_diff(diff):
+    pass
 
 
-diff = richFilled - rich
 
-fig, ax = plt.subplots(figsize=(15, 9))
-ax.imshow(hillshade, cmap="Greys_r")
-ep.plot_bands(diff, ax=ax, alpha=0.5, cmap="inferno_r_alpha", title="test")
-plt.ylabel("depth (meters)")
-plt.show()
 
-# diffs_nonzero = diff[diff != 0]
 
-# plt.hist(diffs_nonzero.flatten(), bins=30)
-# plt.yscale("log")
-# plt.title("Depth of sinkholes found by sinkhole-filling difference algorithm.\n10km by 10km square in southern Guadalupe Mountains")
-# plt.xlabel("depth of sinkhole (m)")
-# plt.ylabel("Number of 1m squares with that depth")
-# plt.show()
-
+exportGeoTif("lonesomeRidgeArea.tif", "output/lonesomeRidgeArea.tif", show=True)
