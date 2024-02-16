@@ -13,6 +13,7 @@ import cv2
 from sinkhole import Sinkhole
 import json
 import datetime
+import time
 
 def exportGeoTif(input_filename, output_filename, colormap='inferno_r', alpha=0.7, show=False):
     datasource, elevation = raster.read(input_filename)
@@ -55,13 +56,15 @@ def exportGeoTif(input_filename, output_filename, colormap='inferno_r', alpha=0.
 
     print("made composite image")
 
+    time_before_sinkholes = time.time()
     sinkholes = sinkholes_from_diff(diff, datasource, elevation)
     for sinkhole in sinkholes:
         print(json.dumps(sinkhole.json_obj(), indent=4))
+    time_after_sinkholes = time.time()
     print(f"found total of {len(sinkholes)} sinkholes")
     print("made sinkhole objects")
-    print(datetime.now())
-
+    print(f"Elapsed time making sinkhole objects: {time_after_sinkholes - time_before_sinkholes} s")
+                                                   
     # export geotiff TODO this runs out of memory, split up into multiple files
     # raster.export(img, datasource, output_filename)
 
