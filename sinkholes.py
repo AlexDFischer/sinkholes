@@ -9,7 +9,7 @@ import richdem as rd
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from pyrsgis import raster
-from units import unit
+import cv2
 from sinkhole import Sinkhole
 
 def exportGeoTif(input_filename, output_filename, colormap='inferno_r', alpha=0.7, show=False):
@@ -50,12 +50,27 @@ def exportGeoTif(input_filename, output_filename, colormap='inferno_r', alpha=0.
         ax.imshow(img)
         plt.colorbar(ScalarMappable(norm=Normalize(0, max_diff), cmap=colormap))
         plt.show()
+    
 
-def sinkholes_from_diff(diff):
+def sinkholes_from_diff(diff, datasource, elevation, max_dimension=100):
+    """max dimension is the maximum width or length allowed for a sinkhole before we no longer include it"""
+    diffs_nonzero = diff > 0
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(diffs_nonzero, connectivity=4, ltype=cv2.CV_16U)
+
+    sinkholes = []
+    for label in range(num_labels):
+        width = stats[label, cv2.CC_STAT_WIDTH]
+        length = stats[label, cv2.CC_STAT_HEIGHT]
+        if width <= max_dimension and length <= max_dimension:
+            x = centroids[label, 0]
+            y = centroids[label, 1]
+            sinkhole = Sinkhole(0, 0, 0, width=width, length=length, elevation=elevation[x,y], area=cv2.CC_STAT_AREA)
+            sinkholes += [sinkhole]
+            
+    return sinkholes
+
+def export_sinkholes_geojson(sinkholes, output_filename):
     pass
-
-
-
 
 
 exportGeoTif("lonesomeRidgeArea.tif", "output/lonesomeRidgeArea.tif", show=True)
