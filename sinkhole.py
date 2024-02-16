@@ -46,7 +46,7 @@ class Sinkhole:
         self.lat = lat
         self.long = long
         self.width = width * unit_conversion
-        self.length = length * unit_conversion)
+        self.length = length * unit_conversion
         self.elevation = elevation * unit_conversion
         self.area = area * unit_conversion * unit_conversion
         self.time = datetime.now()
@@ -64,13 +64,13 @@ class Sinkhole:
         else:
             raise ValueError(f'Error: `"units`" was \"{units}\", but the only allowed values are \"metric\" or \"imperial\".')
         
-        title = "sinkhole {:.1f} d".format(self.depth * unit_conversion)
+        title = "sinkhole" # {:.1f}d".format(self.depth * unit_conversion)
         if self.width != 0 and self.length != 0:
-            title += "{:.1f}w {:.1f}l".format(self.width * unit_conversion, self.length * unit_conversion)
+            title += " {:.1f}w {:.1f}l".format(self.width * unit_conversion, self.length * unit_conversion)
         
         time_str = self.time.strftime("%Y-%M-%dT%H:%M:%SZ")
         
-        {
+        return {
             "type": "Feature",
             "geometry": {
                 "type": "Point",
