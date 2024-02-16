@@ -14,7 +14,14 @@ from osgeo import osr, gdal
 from sinkhole import Sinkhole
 from util import feet_per_meter, gaia_datetime_format, meters_per_foot
 
-def exportGeoTif(geotiff_input_filename, geotiff_output_filename, sinkholes_output_filename, colormap='inferno_r', alpha=0.7, show=False):
+def processGeoTif(geotiff_input_filename, geotiff_output_filename, sinkholes_output_filename,
+                 min_depth=0.5,
+                 max_dimension=300,
+                 colormap='inferno_r',
+                 export_map=True,
+                 export_sinkholes=True,
+                 show_map=False):
+    
     datasource, elevation = raster.read(geotiff_input_filename)
     elevation[elevation<0] = 0
     hillshade = es.hillshade(elevation, azimuth=315, altitude=30)
@@ -37,7 +44,7 @@ def exportGeoTif(geotiff_input_filename, geotiff_output_filename, sinkholes_outp
     print("Done with depression filling")
 
     # image to export and render
-    img = np.zeros(shape=(hillshade.shape[0], hillshade.shape[1], 3), dtype=np.ubyte)
+    img = np.zeros(shape=(hillshade.shape[0], hillshade.shape[1], 3), dtype=np.uint8)
     for channel in range(3):
         img[:, :, channel] = hillshade
 
@@ -55,27 +62,28 @@ def exportGeoTif(geotiff_input_filename, geotiff_output_filename, sinkholes_outp
 
     print("made composite image")
 
-    time_before_sinkholes = time.time()
-    sinkholes = sinkholes_from_diff(diff, datasource, elevation)
-    for sinkhole in sinkholes:
-        print(json.dumps(sinkhole.json_obj(), indent=4))
-    time_after_sinkholes = time.time()
-    print(f"found total of {len(sinkholes)} sinkholes")
-    print(f"Made sinkhole objects. Elapsed time making sinkhole objects: {time_after_sinkholes - time_before_sinkholes} s")
+    if export_sinkholes:
+        time_before_sinkholes = time.time()
+        sinkholes = sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension)
+        time_after_sinkholes = time.time()
+        print(f"found total of {len(sinkholes)} sinkholes")
+        print(f"Made sinkhole objects. Elapsed time making sinkhole objects: {time_after_sinkholes - time_before_sinkholes} s")
+        export_sinkholes_geojson(sinkholes, sinkholes_output_filename)
 
-    export_sinkholes_geojson(sinkholes, sinkholes_output_filename)
-                                                   
-    # export geotiff TODO this runs out of memory, split up into multiple files
-    # raster.export(img, datasource, output_filename)
+    if export_map:
+        # export geotiff TODO this runs out of memory, split up into multiple files
+        raster.export(img, datasource, geotiff_output_filename)
 
-    if show:
+    if show_map:
         fig, ax = plt.subplots(figsize=(15, 15))
         ax.imshow(img)
+        ax.yaxis.set_label_position("right")
+        ax.set_ylabel("depth (m)")
         plt.colorbar(ScalarMappable(norm=Normalize(0, max_diff), cmap=colormap))
         plt.show()
     
 
-def sinkholes_from_diff(diff, datasource, elevation, min_depth=0.5, max_dimension=300):
+def sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension=300):
     """max dimension is the maximum width or length allowed for a sinkhole before we no longer include it"""
     diffs_nonzero = ((diff >= min_depth) * 1).astype(np.uint8)
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(diffs_nonzero, connectivity=4, ltype=cv2.CV_16U)
@@ -163,4 +171,11 @@ def export_sinkholes_geojson(sinkholes, output_filename, units='metric'):
 
 
 
-exportGeoTif("lonesomeRidgeArea.tif", "output/lonesomeRidgeArea.tif", "output/lonesomeRidgeArea.geojson", show=True)
+processGeoTif("northOfRoswell1.tif",
+              "output/northOfRoswell1.tif",
+              "output/northOfRoswell1.geojson",
+              min_depth=0.5,
+              max_dimension=300,
+              export_map=False,
+              export_sinkholes=True,
+              show_map=True)
