@@ -1,0 +1,4 @@
+output/
+*.tif
+__pycache__/
+*.json
