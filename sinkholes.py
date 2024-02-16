@@ -1,3 +1,4 @@
+from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import earthpy.spatial as es
@@ -6,13 +7,15 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from pyrsgis import raster
 import cv2
-from sinkhole import Sinkhole
 import json
 import time
 from osgeo import osr, gdal
 
-def exportGeoTif(input_filename, output_filename, colormap='inferno_r', alpha=0.7, show=False):
-    datasource, elevation = raster.read(input_filename)
+from sinkhole import Sinkhole
+from util import feet_per_meter, gaia_datetime_format, meters_per_foot
+
+def exportGeoTif(geotiff_input_filename, geotiff_output_filename, sinkholes_output_filename, colormap='inferno_r', alpha=0.7, show=False):
+    datasource, elevation = raster.read(geotiff_input_filename)
     elevation[elevation<0] = 0
     hillshade = es.hillshade(elevation, azimuth=315, altitude=30)
 
@@ -59,6 +62,8 @@ def exportGeoTif(input_filename, output_filename, colormap='inferno_r', alpha=0.
     time_after_sinkholes = time.time()
     print(f"found total of {len(sinkholes)} sinkholes")
     print(f"Made sinkhole objects. Elapsed time making sinkhole objects: {time_after_sinkholes - time_before_sinkholes} s")
+
+    export_sinkholes_geojson(sinkholes, sinkholes_output_filename)
                                                    
     # export geotiff TODO this runs out of memory, split up into multiple files
     # raster.export(img, datasource, output_filename)
@@ -70,7 +75,7 @@ def exportGeoTif(input_filename, output_filename, colormap='inferno_r', alpha=0.
         plt.show()
     
 
-def sinkholes_from_diff(diff, datasource, elevation, min_depth=0.7, max_dimension=300):
+def sinkholes_from_diff(diff, datasource, elevation, min_depth=0.5, max_dimension=300):
     """max dimension is the maximum width or length allowed for a sinkhole before we no longer include it"""
     diffs_nonzero = ((diff >= min_depth) * 1).astype(np.uint8)
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(diffs_nonzero, connectivity=4, ltype=cv2.CV_16U)
@@ -125,8 +130,37 @@ def pixel_to_wgs84_coords(x, y, datasource):
     # Transform georeferenced coordinates to GPS coordinates
     return transform.TransformPoint(x_geo, y_geo)
 
-def export_sinkholes_geojson(sinkholes, output_filename):
-    pass
+def export_sinkholes_geojson(sinkholes, output_filename, units='metric'):
+    unit_conversion = None
+    unit_str = None
+    if units == 'metric':
+        unit_conversion = 1.0
+        unit_str = 'm'
+    elif units == 'imperial':
+        unit_conversion = feet_per_meter
+        unit_str = 'ft'
+    else:
+        raise ValueError(f'Error: `"units`" was \"{units}\", but the only allowed values are \"metric\" or \"imperial\".')
+    
+    now = datetime.now()
+    min_depth = min([sinkhole.depth for sinkhole in sinkholes])
+    max_depth = max([sinkhole.depth for sinkhole in sinkholes])
+    output = {
+        "type": "FeatureCollection",
+        "properties": {
+            "name": "caves.science automatic sinkholes",
+            "updated_date": now.strftime(gaia_datetime_format),
+            "time_created": now.strftime(gaia_datetime_format),
+            "notes": f"""{len(sinkholes)} sinkholes automatically detected by caves.science.
+                            Depths range from {min_depth * unit_conversion} {unit_str} to {max_depth * unit_conversion} {unit_str}.""",
+            "cover_photo_id": None
+        },
+        "features": [sinkhole.json_obj() for sinkhole in sinkholes]
+    }
+
+    file = open(output_filename, 'w')
+    file.write(json.dumps(output, indent=4))
 
 
-exportGeoTif("lonesomeRidgeArea.tif", "output/lonesomeRidgeArea.tif", show=False)
+
+exportGeoTif("lonesomeRidgeArea.tif", "output/lonesomeRidgeArea.tif", "output/lonesomeRidgeArea.geojson", show=True)

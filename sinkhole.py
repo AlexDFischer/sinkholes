@@ -4,16 +4,27 @@ from datetime import datetime
 from math import log10
 import matplotlib.pyplot as plt
 import numpy as np
-import math
-
-feet_per_meter = 3.28084 # everything is stored internally as meters, but allow the user to use feet if they want
-meters_per_foot = 0.3048
+from util import feet_per_meter, gaia_datetime_format, meters_per_foot
 
 def rgb_to_hex(rgb):
     """input: numpy ndarray with 3 values, red, green, and blue, which are floats in [0, 1]
     Return color as #RRGGBB for the given color values."""
     rgb = (256*rgb).astype(np.int)
     return '#%02X%02X%02X' % (rgb[0], rgb[1], rgb[2])
+
+def depth_to_pin_png(depth):
+    if depth <= 0.7:
+        return 'red-pin.png'
+    elif depth <= 1.5:
+        return 'orange-pin.png'
+    elif depth <= 2.5:
+        return 'yellow-pin.png'
+    elif depth <= 4:
+        return 'green-pin.png'
+    elif depth <= 6:
+        return 'blue-pin-down.png'
+    else:
+        return 'purple-pin.png'
 
 ncolors = 256
 color_array = [rgb_to_hex(rgb) for rgb in plt.get_cmap('gist_rainbow')(range(ncolors))]
@@ -37,6 +48,7 @@ def depth_to_hex_color(depth):
 class Sinkhole:
 
     def __init__(self, depth, lat, long, width=0, length=0, elevation=None, area=0, units='metric'):
+        unit_conversion = None
         if units == 'metric':
             unit_conversion = 1.0
         elif units == 'imperial':
@@ -57,6 +69,8 @@ class Sinkhole:
         pass
     
     def json_obj(self, units='metric'):
+        unit_conversion = None
+        unit_str = None
         if units == 'metric':
             unit_conversion = 1.0
             unit_str = 'm'
@@ -70,7 +84,7 @@ class Sinkhole:
         if self.width != 0 and self.length != 0:
             title += " {:.1f}w {:.1f}l".format(self.width * unit_conversion, self.length * unit_conversion)
         
-        time_str = self.time.strftime("%Y-%M-%dT%H:%M:%SZ")
+        time_str = self.time.strftime(gaia_datetime_format)
         
         return {
             "type": "Feature",
@@ -87,6 +101,7 @@ class Sinkhole:
                 "deleted": False,
                 "title": title,
                 "is_active": True,
+                "icon": depth_to_pin_png(self.depth),
                 "notes": f"elevation: {int(round(self.elevation * unit_conversion))} {unit_str}\narea: {self.area*unit_conversion**2} {unit_str}^2",
                 "latitude": self.lat,
                 "longitude": self.long,
