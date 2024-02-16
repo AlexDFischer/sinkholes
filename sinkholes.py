@@ -1,4 +1,5 @@
 from datetime import datetime
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 import earthpy.spatial as es
@@ -12,7 +13,9 @@ import time
 from osgeo import osr, gdal
 
 from sinkhole import Sinkhole
-from util import feet_per_meter, gaia_datetime_format, meters_per_foot
+from util import feet_per_meter, gaia_datetime_format, meters_per_foot\
+
+max_sinkholes_per_file = 1000 # gaiagps complains if you try to upload more than 1000 sinkholes in one go
 
 def processGeoTif(geotiff_input_filename, geotiff_output_filename, sinkholes_output_filename,
                  min_depth=0.5,
@@ -72,7 +75,8 @@ def processGeoTif(geotiff_input_filename, geotiff_output_filename, sinkholes_out
 
     if export_map:
         # export geotiff TODO this runs out of memory, split up into multiple files
-        raster.export(img, datasource, geotiff_output_filename)
+        # pyrsgis wants the channel index to be first
+        raster.export(np.moveaxis(img, 2, 0), datasource, geotiff_output_filename, dtype='uint8')
 
     if show_map:
         fig, ax = plt.subplots(figsize=(15, 15))
@@ -113,7 +117,7 @@ def sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension=30
                                 width=width,
                                 length=length,
                                 elevation=elevation[x,y]+diff[x,y],
-                                area=cv2.CC_STAT_AREA)
+                                area=stats[label, cv2.CC_STAT_AREA])
             sinkholes.append(sinkhole)
 
     return sinkholes
@@ -139,43 +143,64 @@ def pixel_to_wgs84_coords(x, y, datasource):
     return transform.TransformPoint(x_geo, y_geo)
 
 def export_sinkholes_geojson(sinkholes, output_filename, units='metric'):
-    unit_conversion = None
-    unit_str = None
-    if units == 'metric':
-        unit_conversion = 1.0
-        unit_str = 'm'
-    elif units == 'imperial':
-        unit_conversion = feet_per_meter
-        unit_str = 'ft'
+    if output_filename == None or output_filename == '':
+        raise ValueError('Must specify an output filename')
+
+    if len(sinkholes) > max_sinkholes_per_file:
+        # split up the sinkholes into multiple files
+        fname_arr = output_filename.split('.')
+        fname_prefix = '' # part of filename before extension
+        fname_extension = ''
+        if len(fname_arr) == 1:
+            # there's no file extension
+            fname_prefix = output_filename
+        else:
+            fname_prefix = '.'.join(fname_arr[:-1])
+            fname_extension = '.' + fname_arr[-1]
+
+        num_files = (len(sinkholes) + max_sinkholes_per_file - 1) // max_sinkholes_per_file
+        num_decimal_digits = math.ceil(math.log10(num_files))
+        for i in range(num_files):
+            new_output_fname = fname_prefix + ('_{:0' + str(num_decimal_digits) + 'n}').format(i) + fname_extension
+            export_sinkholes_geojson(sinkholes[i * max_sinkholes_per_file : (i+1) * max_sinkholes_per_file], new_output_fname, units)
     else:
-        raise ValueError(f'Error: `"units`" was \"{units}\", but the only allowed values are \"metric\" or \"imperial\".')
-    
-    now = datetime.now()
-    min_depth = min([sinkhole.depth for sinkhole in sinkholes])
-    max_depth = max([sinkhole.depth for sinkhole in sinkholes])
-    output = {
-        "type": "FeatureCollection",
-        "properties": {
-            "name": "caves.science automatic sinkholes",
-            "updated_date": now.strftime(gaia_datetime_format),
-            "time_created": now.strftime(gaia_datetime_format),
-            "notes": f"""{len(sinkholes)} sinkholes automatically detected by caves.science.
-                            Depths range from {min_depth * unit_conversion} {unit_str} to {max_depth * unit_conversion} {unit_str}.""",
-            "cover_photo_id": None
-        },
-        "features": [sinkhole.json_obj() for sinkhole in sinkholes]
-    }
+        unit_conversion = None
+        unit_str = None
+        if units == 'metric':
+            unit_conversion = 1.0
+            unit_str = 'm'
+        elif units == 'imperial':
+            unit_conversion = feet_per_meter
+            unit_str = 'ft'
+        else:
+            raise ValueError(f'Error: `"units`" was \"{units}\", but the only allowed values are \"metric\" or \"imperial\".')
+        
+        now = datetime.now()
+        min_depth = min([sinkhole.depth for sinkhole in sinkholes])
+        max_depth = max([sinkhole.depth for sinkhole in sinkholes])
+        output = {
+            "type": "FeatureCollection",
+            "properties": {
+                "name": "caves.science automatic sinkholes",
+                "updated_date": now.strftime(gaia_datetime_format),
+                "time_created": now.strftime(gaia_datetime_format),
+                "notes": f"""{len(sinkholes)} sinkholes automatically detected by caves.science.
+                                Depths range from {min_depth * unit_conversion} {unit_str} to {max_depth * unit_conversion} {unit_str}.""",
+                "cover_photo_id": None
+            },
+            "features": [sinkhole.json_obj() for sinkhole in sinkholes]
+        }
 
-    file = open(output_filename, 'w')
-    file.write(json.dumps(output, indent=4))
+        file = open(output_filename, 'w')
+        file.write(json.dumps(output, indent=4))
 
 
 
-processGeoTif("northOfRoswell1.tif",
-              "output/northOfRoswell1.tif",
-              "output/northOfRoswell1.geojson",
+processGeoTif("lonesomeRidgeArea.tif",
+              "output/lonesomeRidgeArea.tif",
+              "output/lonesomeRidgeArea.geojson",
               min_depth=0.5,
               max_dimension=300,
-              export_map=False,
+              export_map=True,
               export_sinkholes=True,
-              show_map=True)
+              show_map=False)
