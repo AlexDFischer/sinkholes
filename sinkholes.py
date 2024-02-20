@@ -1,3 +1,5 @@
+#!/bin/python3
+
 from datetime import datetime
 import math
 import numpy as np
@@ -11,18 +13,19 @@ import cv2
 import json
 import time
 from osgeo import osr, gdal
+import argparse
 
 from sinkhole import Sinkhole
-from util import feet_per_meter, gaia_datetime_format, meters_per_foot\
+from util import feet_per_meter, gaia_datetime_format, meters_per_foot
 
 max_sinkholes_per_file = 1000 # gaiagps complains if you try to upload more than 1000 sinkholes in one go
 
-def processGeoTif(geotiff_input_filename, geotiff_output_filename, sinkholes_output_filename,
+def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_output_filename,
                  min_depth=0.5,
                  max_dimension=300,
                  colormap='inferno_r',
-                 export_map=True,
-                 export_sinkholes=True,
+                 output_geotiff=True,
+                 output_geojson=True,
                  show_map=False):
     
     datasource, elevation = raster.read(geotiff_input_filename)
@@ -65,7 +68,7 @@ def processGeoTif(geotiff_input_filename, geotiff_output_filename, sinkholes_out
 
     print("made composite image")
 
-    if export_sinkholes:
+    if output_geojson:
         time_before_sinkholes = time.time()
         sinkholes = sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension)
         time_after_sinkholes = time.time()
@@ -73,8 +76,7 @@ def processGeoTif(geotiff_input_filename, geotiff_output_filename, sinkholes_out
         print(f"Made sinkhole objects. Elapsed time making sinkhole objects: {time_after_sinkholes - time_before_sinkholes} s")
         export_sinkholes_geojson(sinkholes, sinkholes_output_filename)
 
-    if export_map:
-        # export geotiff TODO this runs out of memory, split up into multiple files
+    if output_geotiff:
         # pyrsgis wants the channel index to be first
         raster.export(np.moveaxis(img, 2, 0), datasource, geotiff_output_filename, dtype='uint8')
 
@@ -196,11 +198,39 @@ def export_sinkholes_geojson(sinkholes, output_filename, units='metric'):
 
 
 
-processGeoTif("lonesomeRidgeArea.tif",
-              "output/lonesomeRidgeArea.tif",
-              "output/lonesomeRidgeArea.geojson",
+# processGeoTif("inputDEMs/sandias/USGS_1M_13_x37y391_NM_North_Central_FEMA_R6_Lidar_2016_D17.tif",
+#                  "output/sandias/USGS_1M_13_x37y391_NM_North_Central_FEMA_R6_Lidar_2016_D17.tif",
+#                  "output/sandias/USGS_1M_13_x37y391_NM_North_Central_FEMA_R6_Lidar_2016_D17.geojson",
+#               min_depth=0.7,
+#               max_dimension=300,
+#               export_map=True,
+#               export_sinkholes=True,
+#               show_map=False)
+
+parser = argparse.ArgumentParser(prog="Find Sinkholes", description="Automatically find sinkholes using 1m DEMs from USGS")
+parser.add_argument('-i', '--input', action='store')
+parser.add_argument('-otif', '--output-geotiff')
+parser.add_argument('-ojson', '--output-geojson')
+args = parser.parse_args()
+
+if not ('input' in args):
+    print('Must have --input (or -i) argument that specifies input .tif file with DEM')
+    exit(1)
+
+input = args.input
+
+output_geotiff = 'output_geotiff' in args
+output_geojson = 'output_geojson' in args
+
+output_geotiff_fname = ''
+output_geojson_fname = ''
+if output_geotiff:
+    output_geotiff_fname = args.output_geotiff
+if output_geojson:
+    output_geojson_fname = args.output_geojson
+
+process_geotiff(input, output_geotiff_fname, output_geojson_fname,
               min_depth=0.5,
               max_dimension=300,
-              export_map=True,
-              export_sinkholes=True,
-              show_map=False)
+              output_geotiff=output_geotiff,
+              output_geojson=output_geojson)
