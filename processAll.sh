@@ -1,8 +1,8 @@
 #!/bin/bash
 
-input_folder=inputDEMs/brokeoffs
+input_folder=inputDEMs/kangarooMountain
 
-output_folder=output/brokeoffs
+output_folder=output/kangarooMountain
 
 for filename in "$input_folder"/*.tif; do
     output_geotiff_filename=$output_folder/$(basename "$filename")
