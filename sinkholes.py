@@ -213,7 +213,7 @@ parser.add_argument('-otif', '--output-geotiff')
 parser.add_argument('-ojson', '--output-geojson')
 args = parser.parse_args()
 
-if not ('input' in args):
+if not ('input' in args and args.input != None):
     print('Must have --input (or -i) argument that specifies input .tif file with DEM')
     exit(1)
 
