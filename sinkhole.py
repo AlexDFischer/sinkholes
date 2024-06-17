@@ -6,11 +6,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 from util import feet_per_meter, gaia_datetime_format, meters_per_foot
 
+def rgb_entry_to_hex(rgb):
+    """input: float in [0, 1]
+    Return integer in [0, 255]."""
+    result = int(round(rgb * 255))
+    result = min(result, 255)
+    result = max(result, 0)
+    return result
+
 def rgb_to_hex(rgb):
-    """input: numpy ndarray with 3 values, red, green, and blue, which are floats in [0, 1]
+    """input: array with 3 values, red, green, and blue, which are floats in [0, 1]
     Return color as #RRGGBB for the given color values."""
-    rgb = (256*rgb).astype(np.int)
-    return '#%02X%02X%02X' % (rgb[0], rgb[1], rgb[2])
+    return '#%02X%02X%02X' % (rgb_entry_to_hex(rgb[0]), rgb_entry_to_hex(rgb[1]), rgb_entry_to_hex(rgb[2]))
 
 def depth_to_pin_png(depth):
     if depth <= 0.7:
