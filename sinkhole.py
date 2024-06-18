@@ -14,7 +14,7 @@ def rgb_to_hex(rgb):
 
 class Sinkhole:
 
-    def __init__(self, depth, lat, long, color_util, width=0, length=0, elevation=None, area=0, units='metric'):
+    def __init__(self, depth, lat, long, width=0, length=0, elevation=None, area=0, units='metric'):
         unit_conversion = None
         if units == 'metric':
             unit_conversion = 1.0
@@ -26,7 +26,6 @@ class Sinkhole:
         self.depth = depth * unit_conversion
         self.lat = lat
         self.long = long
-        self.color_util = color_util
         self.width = width * unit_conversion
         self.length = length * unit_conversion
         self.elevation = elevation * unit_conversion
@@ -66,13 +65,13 @@ class Sinkhole:
                 "deleted": False,
                 "title": title,
                 "is_active": True,
-                "icon": self.color_util.depth_to_pin_filename(self.depth),
+                "icon": color_util.depth_to_pin_filename(self.depth),
                 "notes": f"elevation: {int(round(self.elevation * unit_conversion))} {unit_str}\narea: {self.area*unit_conversion**2} {unit_str}^2",
                 "latitude": self.lat,
                 "longitude": self.long,
                 "elevation": self.elevation,
                 "marker_type": "pin",
-                "marker-color": rgb_to_hex(self.color_util.depth_to_pin_color(self.depth)),
+                "marker-color": rgb_to_hex(color_util.depth_to_pin_color(self.depth)),
                 "folderId": folder_uuid.hex
             }
         }

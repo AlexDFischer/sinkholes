@@ -10,7 +10,7 @@ from pyrsgis import raster
 import cv2
 import json
 import time
-from osgeo import osr, gdal
+from osgeo import osr
 import argparse
 import traceback
 import uuid
@@ -26,51 +26,46 @@ def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_o
     
     datasource, elevation = raster.read(geotiff_input_filename)
     elevation[elevation<0] = 0
-    hillshade = es.hillshade(elevation, azimuth=315, altitude=30)
     color_util = ColorUtil(config['min_depth_for_colormap'], config['max_depth_for_colormap'], config['pin_colormap'], config['map_colormap'])
 
-    print("Loaded geotiff")
+    print('Loaded geotiff DEM.')
 
     # fill depressions, get difference, and get difference that is unsigned byte scaled 0-255
     rich_dem = rd.rdarray(elevation, no_data=0)
-    diff = rd.FillDepressions(rich_dem) - rich_dem
-    rich_dem = None
-    max_diff = np.max(diff)
-    scaled_diff = (diff * 255 / max_diff).astype(np.uint8)
+    diff = np.array(rd.FillDepressions(rich_dem) - rich_dem)
+    rich_dem = None # save memory
 
-    print("Done with depression filling")
+    print('Done with depression filling.')
 
-    # image to export and render
-    img = np.zeros(shape=(hillshade.shape[0], hillshade.shape[1], 3), dtype=np.uint8)
-    for channel in range(3):
-        img[:, :, channel] = hillshade
+    if output_geotiff:
+        # make hillshade map with sinkholes highlighted by depth
+        hillshade = es.hillshade(elevation, azimuth=315, altitude=30)
+        img = np.zeros(shape=(hillshade.shape[0], hillshade.shape[1], 3), dtype=np.uint8)
+        for channel in range(3):
+            img[:, :, channel] = hillshade # img has all 3 channels equal to hillshade map (so img is black and white hillshade map)
 
-    scaled_diff_colored = np.zeros_like(img)
-    scaled_diff_colored[:, :, :] = color_util.color_array_map[scaled_diff, :]
+        map_color_ufunc = np.frompyfunc(color_util.depth_to_map_color, 1, 1)
+        nonzero_diff_index = diff > 0
+        diff_colors = np.stack(map_color_ufunc(diff[nonzero_diff_index])) # need to stack because numpy wants to store the output of map_color_ufunc as an array of arrays
+        img[nonzero_diff_index, :] = diff_colors
+  
+        nonzero_diff_index = None # save some memory
 
-    nonzero_diff_index = diff > 0
-
-    img[nonzero_diff_index, :] = scaled_diff_colored[nonzero_diff_index, :]
-
-    # save some memory
-    scaled_diff = None
-    scaled_diff_colored = None
-    nonzero_diff_index = None
-
-    print("made composite image")
+        # pyrsgis wants the channel index to be first
+        raster.export(np.moveaxis(img, 2, 0), datasource, geotiff_output_filename, dtype='uint8')
+        
+        print('Exported geotiff map.')
 
     if output_geojson:
-        print(color_util.gaia_colormap_string())
+        print('Depth to pin color mapping for GaiaGPS:')
+        print(color_util.gaia_colormap_string(config['units']))
 
         time_before_sinkholes = time.time()
         sinkholes = sinkholes_from_diff(diff, datasource, elevation, config['min_depth'], config['max_dimension'], color_util)
         time_after_sinkholes = time.time()
         print(f'Found {len(sinkholes)} sinkholes. Elapsed time making sinkhole objects: {time_after_sinkholes - time_before_sinkholes:.2f} s.')
         export_sinkholes_geojson(sinkholes, sinkholes_output_filename, color_util, units=config['units'], max_points_per_file=config['max_points_per_file'])
-
-    if output_geotiff:
-        # pyrsgis wants the channel index to be first
-        raster.export(np.moveaxis(img, 2, 0), datasource, geotiff_output_filename, dtype='uint8')
+        print('Exported sinkhole objects to geojson file.')
     
 
 def sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension, color_util):
@@ -100,7 +95,6 @@ def sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension, c
             sinkhole = Sinkhole(depth=max_depths[label],
                                 lat=wgs84_point[0],
                                 long=wgs84_point[1],
-                                color_util=color_util,
                                 width=width,
                                 length=length,
                                 elevation=elevation[x,y]+diff[x,y],
