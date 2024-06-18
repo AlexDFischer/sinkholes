@@ -82,9 +82,9 @@ class ColorUtil:
         result = ''
         for i, pin_filename in enumerate(pin_filenames):
             if i == 0:
-                result += f'Using pin filename {pin_filename} for 0 <= depth < {self.min_depth_for_colormap * max_min_ratio**((i+0.5)/num_pin_filenames):.1f}\n'
+                result += f'Using pin filename {pin_filename} for 0 <= depth < {self.min_depth_for_colormap * max_min_ratio**((i+0.5)/num_pin_filenames):.2f}\n'
             elif i == num_pin_filenames - 1:
-                result += f'Using pin filename {pin_filename} for {self.min_depth_for_colormap * max_min_ratio**((i-0.5)/num_pin_filenames):.1f} <= depth'
+                result += f'Using pin filename {pin_filename} for {self.min_depth_for_colormap * max_min_ratio**((i-0.5)/num_pin_filenames):.2f} <= depth'
             else:
-                result += f'Using pin filename {pin_filename} for {self.min_depth_for_colormap * max_min_ratio**((i-0.5)/num_pin_filenames):.1f} <= depth < {self.min_depth_for_colormap * max_min_ratio**((i+0.5)/num_pin_filenames):.1f}\n'
+                result += f'Using pin filename {pin_filename} for {self.min_depth_for_colormap * max_min_ratio**((i-0.5)/num_pin_filenames):.2f} <= depth < {self.min_depth_for_colormap * max_min_ratio**((i+0.5)/num_pin_filenames):.2f}\n'
         return result

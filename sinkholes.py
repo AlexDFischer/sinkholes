@@ -13,6 +13,7 @@ import time
 from osgeo import osr, gdal
 import argparse
 import traceback
+import uuid
 
 from sinkhole import Sinkhole
 from util import feet_per_meter, gaia_datetime_format, meters_per_foot
@@ -131,6 +132,8 @@ def pixel_to_wgs84_coords(x, y, datasource):
 def export_sinkholes_geojson(sinkholes, output_filename, color_util, units='metric', max_points_per_file=-1):
     if output_filename == None or output_filename == '':
         raise ValueError('Must specify an output filename')
+    
+    folder_uuid = uuid.uuid4()
 
     if max_points_per_file > 0 and len(sinkholes) > max_points_per_file:
         # split up the sinkholes into multiple files
@@ -165,31 +168,29 @@ def export_sinkholes_geojson(sinkholes, output_filename, color_util, units='metr
         min_depth = min([sinkhole.depth for sinkhole in sinkholes])
         max_depth = max([sinkhole.depth for sinkhole in sinkholes])
         output = {
-            "type": "FeatureCollection",
+            "type": "FeatureCollection", # folder info for GaiaGPS
             "properties": {
                 "name": "caves.science automatic sinkholes",
                 "updated_date": now.strftime(gaia_datetime_format),
                 "time_created": now.strftime(gaia_datetime_format),
                 "notes": f"""{len(sinkholes)} sinkholes automatically detected by caves.science.
-                                Depths range from {min_depth * unit_conversion} {unit_str} to {max_depth * unit_conversion} {unit_str}.""",
-                "cover_photo_id": None
+                                Depths range from {min_depth * unit_conversion}:.1f {unit_str} to {max_depth * unit_conversion:.1f} {unit_str}."""
             },
-            "features": [sinkhole.json_obj(color_util) for sinkhole in sinkholes]
+            "features": [{ # folder info for Caltopo
+                "geometry": None,
+                "id": folder_uuid.hex,
+                "type": "Feature",
+                "properties":{
+                    "visible": True,
+                    "title": "caves.science automatic sinkholes",
+                    "class": "Folder",
+                    "labelVisible": True
+                }
+            }] + [sinkhole.json_obj(color_util, folder_uuid, units=units) for sinkhole in sinkholes]
         }
 
         file = open(output_filename, 'w')
         file.write(json.dumps(output, indent=4))
-
-parser = argparse.ArgumentParser(prog="Find Sinkholes", description="Automatically find sinkholes using 1m DEMs from USGS")
-parser.add_argument('-i', '--input', action='store')
-parser.add_argument('-otif', '--output-geotiff')
-parser.add_argument('-ojson', '--output-geojson')
-parser.add_argument('-c', '--config')
-args = parser.parse_args()
-
-if not ('input' in args and args.input != None):
-    print('Must have --input (or -i) argument that specifies input .tif file with DEM')
-    exit(1)
 
 def default_config():
     return {
@@ -203,6 +204,17 @@ def default_config():
         "units": "metric",
         "verbose": False
     }
+
+parser = argparse.ArgumentParser(prog="Find Sinkholes", description="Automatically find sinkholes using 1m DEMs from USGS")
+parser.add_argument('-i', '--input', action='store')
+parser.add_argument('-otif', '--output-geotiff')
+parser.add_argument('-ojson', '--output-geojson')
+parser.add_argument('-c', '--config')
+args = parser.parse_args()
+
+if not ('input' in args and args.input != None):
+    print('Must have --input (or -i) argument that specifies input .tif file with DEM')
+    exit(1)
 
 config = default_config()
 if 'config' in args and args.config != None:
@@ -251,7 +263,7 @@ if output_geojson:
 
 if config['verbose']:
     print('Using config object:')
-    print(config)
+    print(json.dumps(config, indent=4))
 
 process_geotiff(input, output_geotiff_fname, output_geojson_fname,
                 config=config,

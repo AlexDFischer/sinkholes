@@ -33,7 +33,7 @@ class Sinkhole:
         self.area = area * unit_conversion * unit_conversion
         self.time = datetime.now()
     
-    def json_obj(self, color_util, units='metric'):
+    def json_obj(self, color_util, folder_uuid, units='metric'):
         unit_conversion = None
         unit_str = None
         if units == 'metric':
@@ -72,6 +72,7 @@ class Sinkhole:
                 "longitude": self.long,
                 "elevation": self.elevation,
                 "marker_type": "pin",
-                "marker-color": rgb_to_hex(self.color_util.depth_to_pin_color(self.depth))
+                "marker-color": rgb_to_hex(self.color_util.depth_to_pin_color(self.depth)),
+                "folderId": folder_uuid.hex
             }
         }
