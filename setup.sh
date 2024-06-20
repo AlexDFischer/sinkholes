@@ -1,4 +1,4 @@
-apt install libgdal-dev python3-gdal
+sudo apt install libgdal-dev python3-gdal
 
 export CPLUS_INCLUDE_PATH=/usr/include/gdal
 
