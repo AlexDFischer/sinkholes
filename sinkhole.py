@@ -1,9 +1,6 @@
 #!/bin/python3
 
 from datetime import datetime
-from math import log10
-import matplotlib.pyplot as plt
-import numpy as np
 from util import feet_per_meter, gaia_datetime_format, meters_per_foot
 
 def rgb_to_hex(rgb):

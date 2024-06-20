@@ -1,0 +1,7 @@
+earthpy
+gdal
+numpy
+opencv-python
+osgeo
+pyrsgis
+richdem

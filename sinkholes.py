@@ -3,7 +3,6 @@
 from datetime import datetime
 import math
 import numpy as np
-import matplotlib.pyplot as plt
 import earthpy.spatial as es
 import richdem as rd
 from pyrsgis import raster
@@ -16,7 +15,7 @@ import traceback
 import uuid
 
 from sinkhole import Sinkhole
-from util import feet_per_meter, gaia_datetime_format, meters_per_foot
+from util import feet_per_meter, gaia_datetime_format
 from color_utils import ColorUtil
 
 def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_output_filename,
