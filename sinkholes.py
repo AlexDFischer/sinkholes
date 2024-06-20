@@ -60,14 +60,14 @@ def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_o
         print(color_util.gaia_colormap_string(config['units']))
 
         time_before_sinkholes = time.time()
-        sinkholes = sinkholes_from_diff(diff, datasource, elevation, config['min_depth'], config['max_dimension'], color_util)
+        sinkholes = sinkholes_from_diff(diff, datasource, elevation, config['min_depth'], config['max_dimension'])
         time_after_sinkholes = time.time()
         print(f'Found {len(sinkholes)} sinkholes. Elapsed time making sinkhole objects: {time_after_sinkholes - time_before_sinkholes:.2f} s.')
         export_sinkholes_geojson(sinkholes, sinkholes_output_filename, color_util, units=config['units'], max_points_per_file=config['max_points_per_file'])
         print('Exported sinkhole objects to geojson file.')
     
 
-def sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension, color_util):
+def sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension):
     """max dimension is the maximum width or length allowed for a sinkhole before we no longer include it"""
     diffs_nonzero = ((diff >= min_depth) * 1).astype(np.uint8)
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(diffs_nonzero, connectivity=4, ltype=cv2.CV_16U)
