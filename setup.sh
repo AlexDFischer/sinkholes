@@ -1,6 +1,6 @@
-wget https://deb.debian.org/debian/pool/main/g/gdal/gdal_3.9.0+dfsg-1.dsc
-
-sudo dpkg -i gdal_3.9.0+dfsg-1.dsc
+sudo add-apt-repository ppa:ubuntugis/ppa
+sudo apt-get update
+sudo apt install libgdal-dev
 
 export CPLUS_INCLUDE_PATH=/usr/include/gdal
 

@@ -91,12 +91,22 @@ def sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension):
             wgs84_point = pixel_to_wgs84_coords(x, y, datasource)
             x = int(round(x))
             y = int(round(y))
+
+            # debug 0 elevation sinkholes
+            temp_elevation = elevation[x,y]+diff[x,y]
+            if temp_elevation < 10:
+                print(f'elevation for this point is small: {temp_elevation}')
+                print(f'elevation array for this point: {elevation[x,y]}')
+                print(f'diff: {diff[x,y]}')
+                print(f'depth: {max_depths[label]}')
+                print(f'coordinates: {wgs84_point[0]}, {wgs84_point[1]}')
+
             sinkhole = Sinkhole(depth=max_depths[label],
                                 lat=wgs84_point[0],
                                 long=wgs84_point[1],
                                 width=width,
                                 length=length,
-                                elevation=elevation[x,y]+diff[x,y],
+                                elevation=temp_elevation,
                                 area=stats[label, cv2.CC_STAT_AREA])
             sinkholes.append(sinkhole)
 

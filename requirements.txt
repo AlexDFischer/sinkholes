@@ -2,6 +2,5 @@ earthpy
 gdal
 numpy
 opencv-python
-gdal
 pyrsgis
 richdem

@@ -9,9 +9,16 @@
 
     <p>This program detects sinkholes by looking for local minima in the landscape, where water cannot drain away. It uses the <a href="https://doi.org/10.1016/j.cageo.2013.04.024">Priority-Flood algorithm from Barnes, Lehman, Mulla 2014</a>. Specifically it uses the <a href="https://doi.org/10.1016/j.cageo.2016.02.021">efficient implementation from Zhou, Sun, Fu 2016</a>.</p>
 
+    <h2>Setup the script/install dependencies</h2>
+
+    First, you need to install the <a href="https://gdal.org">GDAL library</a>. They have installation instructions on <a href="https://gdal.org/download.html">their download page</a>. Make sure you have version >=3.9.0 installed. You can test this by running <span class="code">gdalinfo --version</span>. If you have Anaconda installed, you can install the right version of GDAL with <span class="code">conda install conda-forge/label/main::libgdal
+    </span>.
+
+    Next, install the required python packages in <span class="code">requirements.txt</span>. You can do this using pip via <span class="code">pip install -r requirements.txt</span>. Now you're ready to use the script that is at <span class="code">sinkholes.py</span>.
+
     <h2>Acquire the data</h2>
 
-    <p>First, you download the lidar data for the area you're interested in from the USGS. The USGS publishes this data in 10 km by 10 km squares. The data is available for much of the US, and the USGS plans to gather this data for the entire US eventually.</p>
+    <p>Now you have to get the LIDAR data for the area you're interested in from the USGS. The USGS publishes this data in 10 km by 10 km squares. The data is available for much of the US, and the USGS plans to gather this data for the entire US eventually.</p>
         
     <p>To find the lidar data for the area you're interested in, go to the USGS's <a href="https://apps.nationalmap.gov/downloader/">GIS Data Download</a> page. Check the "Elevation Products (3DEP) option on the left:</p>
 
@@ -33,5 +40,7 @@
     
     <img src="stepByStep_download.png" class="stepByStepImg" />
 
-    <h2>Run the program</h2>
+    <h2>Run the script</h2>
+
+    <p>You can execute the script with the following command: TODO</p>
 </body>
