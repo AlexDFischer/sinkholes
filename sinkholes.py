@@ -109,18 +109,6 @@ def sinkholes_from_diff(diff, wgs84_transformer, elevation, min_depth, max_dimen
             x = int(round(x))
             y = int(round(y))
 
-            # debug 0 elevation points that show up in the USGS data
-            debug_0_elevation = True
-            if debug_0_elevation:
-                temp_elevation = elevation[x,y]+diff[x,y]
-                if temp_elevation < 10:
-                    print(f'elevation for this point is small: {temp_elevation}')
-                    print(f'elevation array for this point: {elevation[x,y]}')
-                    print(f'area: {stats[label, cv2.CC_STAT_AREA]}')
-                    print(f'depth: {max_depths[label]}')
-                    print(f'diff: {diff[x,y]}')
-                    print(f'coordinates: {wgs84_point[0]}, {wgs84_point[1]}')
-
             sinkhole = Sinkhole(depth=max_depths[label],
                                 lat=wgs84_point[1],
                                 long=wgs84_point[0],
