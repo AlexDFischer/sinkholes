@@ -55,5 +55,20 @@
 
     <p>This map file has GPS information built in and can be imported into CalTopo and Avenza to use as a map layer. The sinkholes imported will look something like this:</p>
 
-    <p>Generally, the script finds many "sinkholes" in streambeds that are just small pools or natural dams in the streambed. These many sinkholes in streambeds should usually be ignored in favor of the ones outside of streambeds, which are more likely to be actual karst sinkholes. However, sometimes cave entrances can be in streambeds, so don't necessarily write off all sinkholes found in streambeds!</p>
+    <img src="pointsExample.png" />
+
+    <p>Generally, the script finds many "sinkholes" in streambeds that are just small pools or natural dams in the streambed that make a small depression. Additionally, streams that cross under roads via culverts or bridges are likely to show up as "sinkholes". These many sinkholes in streambeds should usually be ignored in favor of the ones outside of streambeds, which are more likely to be actual karst sinkholes. However, sometimes cave entrances can be in streambeds, so don't necessarily write off all sinkholes found in streambeds!</p>
+
+    <p>The sinkholes are colorcoded by depth. The points in CalTopo have their color continuously vary from red (at the default minimum depth of 0.5 m) to purple (at 6 m, and all deeper sinkholes have the same color) according to colors of the rainbow, using a log scale. GaiaGPS has a small set of allowed colors, and the depth maps to those colors using that same rainbow-log-scale:</p>
+
+    <ul>
+        <li>Red for 0 &le; depth &lt; 0.62 m</li>
+        <li>Orange for 0.62 m &le; depth &lt; 0.93 m</li>
+        <li>Yellow for 0.93 m &le; depth &lt; 1.41 m</li>
+        <li>Green for 1.41 m &le; depth &lt; 2.13 m</li>
+        <li>Blue for 2.13 m &le; depth &lt; 3.22 m</li>
+        <li>Purple for 3.22 m &le; depth</li>
+    </ul>
+
+    <p>These min and max values for the colormap log scale can be changed in the config file; they are the keys <span class="code">min_depth_for_colormap</span> (default value 0.5 m) and <span class="code">max_depth_for_colormap</span> (default value 6 m).</p>
 </body>
