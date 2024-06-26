@@ -33,7 +33,7 @@ def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_o
 
     print('Loaded geotiff DEM.')
 
-    # fill depressions, get difference, and get difference that is unsigned byte scaled 0-255
+    # fill depressions, get difference, and get difference
     rich_dem = rd.rdarray(elevation_, no_data=0)
     diff = np.array(rd.FillDepressions(rich_dem) - rich_dem)
     rich_dem = None # save memory
@@ -90,32 +90,35 @@ def sinkholes_from_diff(diff, wgs84_transformer, elevation, min_depth, max_dimen
     sinkholes = []
 
     max_depths = np.zeros((num_labels))
+    max_depth_locations = np.zeros((num_labels, 2))
     for x in range(diff.shape[0]):
         for y in range(diff.shape[1]):
             depth = diff[x,y]
             label = labels[x,y]
             if depth > max_depths[label]:
                 max_depths[label] = depth
+                max_depth_locations[label] = [x, y]
     
     for label in range(num_labels):
         width = stats[label, cv2.CC_STAT_WIDTH]
         length = stats[label, cv2.CC_STAT_HEIGHT]
         if width <= max_dimension and length <= max_dimension:
-            x = centroids[label, 0]
-            y = centroids[label, 1]
+            x = max_depth_locations[label, 0]
+            y = max_depth_locations[label, 1]
             wgs84_point = wgs84_transformer.xy(x, y)
             x = int(round(x))
             y = int(round(y))
 
             # debug 0 elevation points that show up in the USGS data
-            debug_0_elevation = False
+            debug_0_elevation = True
             if debug_0_elevation:
                 temp_elevation = elevation[x,y]+diff[x,y]
                 if temp_elevation < 10:
                     print(f'elevation for this point is small: {temp_elevation}')
                     print(f'elevation array for this point: {elevation[x,y]}')
-                    print(f'diff: {diff[x,y]}')
+                    print(f'area: {stats[label, cv2.CC_STAT_AREA]}')
                     print(f'depth: {max_depths[label]}')
+                    print(f'diff: {diff[x,y]}')
                     print(f'coordinates: {wgs84_point[0]}, {wgs84_point[1]}')
 
             sinkhole = Sinkhole(depth=max_depths[label],
@@ -123,7 +126,7 @@ def sinkholes_from_diff(diff, wgs84_transformer, elevation, min_depth, max_dimen
                                 long=wgs84_point[0],
                                 width=width,
                                 length=length,
-                                elevation=temp_elevation,
+                                elevation=elevation[x,y]+diff[x,y],
                                 area=stats[label, cv2.CC_STAT_AREA])
             sinkholes.append(sinkhole)
 
