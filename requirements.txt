@@ -1,6 +1,5 @@
 earthpy
-gdal
 numpy
 opencv-python
-pyrsgis
+rasterio
 richdem

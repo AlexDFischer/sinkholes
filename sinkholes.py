@@ -4,12 +4,14 @@ from datetime import datetime
 import math
 import numpy as np
 import earthpy.spatial as es
+import rasterio
+import rasterio.features
+import rasterio.transform
+import rasterio.warp
 import richdem as rd
-from pyrsgis import raster
 import cv2
 import json
 import time
-from osgeo import osr
 import argparse
 import traceback
 import uuid
@@ -18,19 +20,21 @@ from sinkhole import Sinkhole
 from util import feet_per_meter, gaia_datetime_format
 from color_utils import ColorUtil
 
+wgs84_name = 'EPSG:4326'
+
 def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_output_filename,
                     config,
                     output_geotiff=True,
                     output_geojson=True):
-    
-    datasource, elevation = raster.read(geotiff_input_filename)
-    elevation[elevation<0] = 0
+    geotiff_input = rasterio.open(geotiff_input_filename, nodata=0)
+    elevation_ = geotiff_input.read(1)
+    elevation_[elevation_<0] = 0
     color_util = ColorUtil(config['min_depth_for_colormap'], config['max_depth_for_colormap'], config['pin_colormap'], config['map_colormap'])
 
     print('Loaded geotiff DEM.')
 
     # fill depressions, get difference, and get difference that is unsigned byte scaled 0-255
-    rich_dem = rd.rdarray(elevation, no_data=0)
+    rich_dem = rd.rdarray(elevation_, no_data=0)
     diff = np.array(rd.FillDepressions(rich_dem) - rich_dem)
     rich_dem = None # save memory
 
@@ -38,20 +42,23 @@ def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_o
 
     if output_geotiff:
         # make hillshade map with sinkholes highlighted by depth
-        hillshade = es.hillshade(elevation, azimuth=315, altitude=30)
-        img = np.zeros(shape=(hillshade.shape[0], hillshade.shape[1], 3), dtype=np.uint8)
+        hillshade = es.hillshade(elevation_, azimuth=315, altitude=30)
+        img = np.zeros(shape=(3, hillshade.shape[0], hillshade.shape[1]), dtype=np.uint8)
         for channel in range(3):
-            img[:, :, channel] = hillshade # img has all 3 channels equal to hillshade map (so img is black and white hillshade map)
+            img[channel, :, :] = hillshade # img has all 3 channels equal to hillshade map (so img is black and white hillshade map)
 
         map_color_ufunc = np.frompyfunc(color_util.depth_to_map_color, 1, 1)
         nonzero_diff_index = diff > 0
         diff_colors = np.stack(map_color_ufunc(diff[nonzero_diff_index])) # need to stack because numpy wants to store the output of map_color_ufunc as an array of arrays
-        img[nonzero_diff_index, :] = diff_colors
+        diff_colors = np.moveaxis(diff_colors, -1, 0) # rearrange axes so last index is index for 3 color channels
+        img[:, nonzero_diff_index] = diff_colors
   
         nonzero_diff_index = None # save some memory
 
-        # pyrsgis wants the channel index to be first
-        raster.export(np.moveaxis(img, 2, 0), datasource, geotiff_output_filename, dtype='uint8')
+        output_profile = geotiff_input.profile
+        output_profile.update(dtype=rasterio.uint8, count=3, nodata=0)
+        with rasterio.open(geotiff_output_filename, 'w', **output_profile) as geotiff_output:
+            geotiff_output.write(img)
         
         print('Exported geotiff map.')
 
@@ -59,15 +66,23 @@ def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_o
         print('Depth to pin color mapping for GaiaGPS:')
         print(color_util.gaia_colormap_string(config['units']))
 
+        # get wgs84 AffineTransformer object
+        transform, width, height = rasterio.warp.calculate_default_transform(geotiff_input.crs,
+                                                                             wgs84_name,
+                                                                             geotiff_input.width,
+                                                                             geotiff_input.height,
+                                                                             *geotiff_input.bounds)
+        wgs84_transformer = rasterio.transform.AffineTransformer(transform)
+
         time_before_sinkholes = time.time()
-        sinkholes = sinkholes_from_diff(diff, datasource, elevation, config['min_depth'], config['max_dimension'])
+        sinkholes = sinkholes_from_diff(diff, wgs84_transformer, elevation_, config['min_depth'], config['max_dimension'])
         time_after_sinkholes = time.time()
         print(f'Found {len(sinkholes)} sinkholes. Elapsed time making sinkhole objects: {time_after_sinkholes - time_before_sinkholes:.2f} s.')
         export_sinkholes_geojson(sinkholes, sinkholes_output_filename, color_util, units=config['units'], max_points_per_file=config['max_points_per_file'])
         print('Exported sinkhole objects to geojson file.')
     
 
-def sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension):
+def sinkholes_from_diff(diff, wgs84_transformer, elevation, min_depth, max_dimension):
     """max dimension is the maximum width or length allowed for a sinkhole before we no longer include it"""
     diffs_nonzero = ((diff >= min_depth) * 1).astype(np.uint8)
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(diffs_nonzero, connectivity=4, ltype=cv2.CV_16U)
@@ -88,22 +103,24 @@ def sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension):
         if width <= max_dimension and length <= max_dimension:
             x = centroids[label, 0]
             y = centroids[label, 1]
-            wgs84_point = pixel_to_wgs84_coords(x, y, datasource)
+            wgs84_point = wgs84_transformer.xy(x, y)
             x = int(round(x))
             y = int(round(y))
 
-            # debug 0 elevation sinkholes
-            temp_elevation = elevation[x,y]+diff[x,y]
-            if temp_elevation < 10:
-                print(f'elevation for this point is small: {temp_elevation}')
-                print(f'elevation array for this point: {elevation[x,y]}')
-                print(f'diff: {diff[x,y]}')
-                print(f'depth: {max_depths[label]}')
-                print(f'coordinates: {wgs84_point[0]}, {wgs84_point[1]}')
+            # debug 0 elevation points that show up in the USGS data
+            debug_0_elevation = False
+            if debug_0_elevation:
+                temp_elevation = elevation[x,y]+diff[x,y]
+                if temp_elevation < 10:
+                    print(f'elevation for this point is small: {temp_elevation}')
+                    print(f'elevation array for this point: {elevation[x,y]}')
+                    print(f'diff: {diff[x,y]}')
+                    print(f'depth: {max_depths[label]}')
+                    print(f'coordinates: {wgs84_point[0]}, {wgs84_point[1]}')
 
             sinkhole = Sinkhole(depth=max_depths[label],
-                                lat=wgs84_point[0],
-                                long=wgs84_point[1],
+                                lat=wgs84_point[1],
+                                long=wgs84_point[0],
                                 width=width,
                                 length=length,
                                 elevation=temp_elevation,
@@ -111,26 +128,6 @@ def sinkholes_from_diff(diff, datasource, elevation, min_depth, max_dimension):
             sinkholes.append(sinkhole)
 
     return sinkholes
-
-def pixel_to_wgs84_coords(x, y, datasource):
-    """x, y is the pixel location in the geotiff we want to convert to WGS84 coordinates.
-    datasource is the gdal datasource obtained from loading the geotiff using gdal."""
-    
-    geo_transform = datasource.GetGeoTransform()
-
-    # Convert pixel coordinates to georeferenced coordinates
-    x_geo = geo_transform[0] + x*geo_transform[1] + y*geo_transform[2]
-    y_geo = geo_transform[3] + x*geo_transform[4] + y*geo_transform[5]
-
-    # Build the coordinate transformation
-    old_coords = osr.SpatialReference()
-    old_coords.ImportFromWkt(datasource.GetProjection())
-    new_coords = osr.SpatialReference()
-    new_coords.ImportFromEPSG(4326)  # EPSG code for WGS84
-    transform = osr.CoordinateTransformation(old_coords, new_coords)
-
-    # Transform georeferenced coordinates to GPS coordinates
-    return transform.TransformPoint(x_geo, y_geo)
 
 def export_sinkholes_geojson(sinkholes, output_filename, color_util, units='metric', max_points_per_file=-1):
     if output_filename == None or output_filename == '':
@@ -202,8 +199,8 @@ def default_config():
         'min_depth_for_colormap': 0.5, # colormap for depth starts at this value. Sinkholes shallower than this depth get color that indicates min depth
         'max_depth_for_colormap': 6, # colormap for depth ends at this value. Sinkholes deeper than this depth get color that indicates max depth
         'max_points_per_file': -1, # if there are more than this number of points, split them up into multiple files (useful because e.g. gaiagps can't handle more than 1000 points per file). Set it to -1 for no max
-        "pin_color_colormap": "gist_rainbow", # matplotlib colormap name to use for pin color. Not recommended to be the same as map_depth_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
-        "map_depth_colormap": "inferno_r", # matplotlib colormap name to use for depth colorcoding in output map. Not recommended to be the same as pin_color_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
+        "pin_colormap": "gist_rainbow", # matplotlib colormap name to use for pin color. Not recommended to be the same as map_depth_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
+        "map_colormap": "inferno_r", # matplotlib colormap name to use for depth colorcoding in output map. Not recommended to be the same as pin_color_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
         "units": "metric",
         "verbose": False
     }
