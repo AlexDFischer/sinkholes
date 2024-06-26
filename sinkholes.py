@@ -33,8 +33,8 @@ def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_o
     elevation = geotiff_input.read(1)
     elevation[elevation<0] = 0
     color_util = ColorUtil(config['min_depth_for_colormap'], config['max_depth_for_colormap'], config['pin_colormap'], config['map_colormap'])
-
-    print('Loaded geotiff DEM.')
+    if config['verbose']:
+        print('Loaded geotiff DEM.')
 
     # fill depressions, get difference, and get difference
     rich_dem = rd.rdarray(elevation, no_data=0)
@@ -42,7 +42,8 @@ def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_o
     del rich_dem # save memory
     gc.collect()
 
-    print('Done with depression filling.')
+    if config['verbose']:
+        print('Done with depression filling.')
 
     if output_geotiff:
         # make hillshade map with sinkholes highlighted by depth
@@ -71,8 +72,9 @@ def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_o
         print('Exported geotiff map.')
 
     if output_geojson:
-        print('Depth to pin color mapping for GaiaGPS:')
-        print(color_util.gaia_colormap_string(config['units']))
+        if config['verbose']:
+            print('Depth to pin color mapping for GaiaGPS:')
+            print(color_util.gaia_colormap_string(config['units']))
 
         time_before_sinkholes = time.time()
         sinkholes = sinkholes_from_diff(diff, geotiff_input, elevation, config['min_depth'], config['max_dimension'])
@@ -198,7 +200,7 @@ def default_config():
         "pin_colormap": "gist_rainbow", # matplotlib colormap name to use for pin color. Not recommended to be the same as map_depth_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
         "map_colormap": "inferno_r", # matplotlib colormap name to use for depth colorcoding in output map. Not recommended to be the same as pin_color_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
         "units": "metric",
-        "verbose": False
+        "verbose": True
     }
 
 parser = argparse.ArgumentParser(prog="Find Sinkholes", description="Automatically find sinkholes using 1m DEMs from USGS")

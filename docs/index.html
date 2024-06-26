@@ -5,15 +5,15 @@
 </head>
 <body>
     <h1>Automatically detect sinkholes: step-by-step instructions</h1>
-    <p>This program takes in 1 meter digital elevation models (DEM's) made from lidar data that the US Geological Survey publishes, and processes the data to automatically detect sinkholes. It exports the sinkholes to a GeoJSON file that contains all the sinkholes as waypoints color-coded by depth, that can be imported into mapping applications such as GaiaGPS, CalTopo, and Google Earth. It also exports a GeoTIFF map file that has a hillshade map with the sinkholes highlighted and colorcoded by depth. Expect it to use about 2.8 GB of RAM to process a 10 m by 10 km USGS quad.</p>
+    <p>This program takes in 1 meter digital elevation models (DEM's) made from lidar data that the US Geological Survey publishes, and processes the data to automatically detect sinkholes. It exports the sinkholes to a GeoJSON file that contains all the sinkholes as waypoints color-coded by depth, that can be imported into mapping applications such as GaiaGPS, CalTopo, and Google Earth. It also exports a GeoTIFF map file that has a hillshade map with the sinkholes highlighted and colorcoded by depth. This map file can be imported into CalTopo and Avenza to use as a map layer. Expect it to use about 2.8 GB of RAM to process a 10 km by 10 km USGS quad.</p>
 
     <p>This program detects sinkholes by looking for local minima in the landscape, where water cannot drain away. It uses the <a href="https://doi.org/10.1016/j.cageo.2013.04.024">Priority-Flood algorithm from Barnes, Lehman, Mulla 2014</a>. Specifically it uses the <a href="https://doi.org/10.1016/j.cageo.2016.02.021">efficient implementation from Zhou, Sun, Fu 2016</a>.</p>
 
     <h2>Setup the script/install dependencies</h2>
 
-    This script uses Python; make sure you have Python 3 installed. 
+    <p>This script uses Python; make sure you have Python 3 installed. Get the script files by <a href="https://github.com/AlexDFischer/sinkholes/archive/refs/heads/master.zip">downloading from GitHub</a> or by <a href="https://github.com/AlexDFischer/sinkholes">cloning the repository</a>.</p>
 
-    <p>Next, install the required python packages in <span class="code">requirements.txt</span>. You can do this using pip via <span class="code">pip install -r requirements.txt</span>. Now you're ready to use the script that is at <span class="code">sinkholes.py</span>.</p>
+    <p>Next, install the required Python packages in <span class="code">requirements.txt</span>. You can do this using pip via <span class="code">pip install -r requirements.txt</span>. Now you're ready to use the script that is at <span class="code">sinkholes.py</span>.</p>
 
     <h2>Acquire the data</h2>
 
@@ -48,4 +48,12 @@
     <p>The <span class="code">-i</span> flag is the name of the file with the LIDAR data you downloaded from the USGS. The <span class="code">-otif</span> flag is the name of the file to which it saves the hillshade map with sinkholes highlighted. You can omit this flag if you don't want to export a hillshade map. The <span class="code">-ojson</span> flag is the name of the file to which it saves the list of sinkholes points that can be imported into GaiaGPS, CalTopo, Google Earth, etc. You can omit this flag if you don't want to export a list of sinkhole points.</p>
 
     <p>You can add a flag <span class="code">-c &lt;config-file-name.json&gt;</span> to include a config file that allows you to change some settings. An example config file with all the default settings is in <span class="code">config.json</span>. If you're using GaiaGPS, you'll want to set <span class="code">max_points_per_file</span> to 1000, to split the list of sinkhole points over multiple files if there are more than 1000, because GaiaGPS doesn't let you import more than 1000 objects per file.</p>
+
+    <p>The GeoTIFF file exported by the program is a hillshade map with sinkholes highlighted by depth, like so:</p>
+
+    <img src="hillshadeExample.png" width="1010px" />
+
+    <p>This map file has GPS information built in and can be imported into CalTopo and Avenza to use as a map layer. The sinkholes imported will look something like this:</p>
+
+    <p>Generally, the script finds many "sinkholes" in streambeds that are just small pools or natural dams in the streambed. These many sinkholes in streambeds should usually be ignored in favor of the ones outside of streambeds, which are more likely to be actual karst sinkholes. However, sometimes cave entrances can be in streambeds, so don't necessarily write off all sinkholes found in streambeds!</p>
 </body>
