@@ -5,6 +5,7 @@ import math
 import numpy as np
 import earthpy.spatial as es
 import gc
+import json
 import pyproj
 import rasterio
 import rasterio.features
@@ -12,14 +13,14 @@ import rasterio.transform
 import rasterio.warp
 import richdem as rd
 import cv2
-import json
+import pyjson5
 import time
 import argparse
 import traceback
 import uuid
 
 from sinkhole import Sinkhole
-from util import feet_per_meter, gaia_datetime_format
+from util import feet_per_meter, meters_per_foot, gaia_datetime_format
 from color_utils import ColorUtil
 
 wgs84_name = 'EPSG:4326'
@@ -211,39 +212,72 @@ parser.add_argument('-c', '--config')
 args = parser.parse_args()
 
 if not ('input' in args and args.input != None):
-    print('Must have --input (or -i) argument that specifies input .tif file with DEM')
+    print('Must have --input (or -i) argument that specifies input .tif file with digital elevation model.')
     exit(1)
 
+# parse config file
 config = default_config()
 if 'config' in args and args.config != None:
+    unit_conversion_constant = 1.0 # constant to multiply user-given numbers in config file by, to convert to meters
     try:
         with open(args.config, 'r') as config_file:
-            config_json = json.loads(config_file.read())
-            if 'min_depth' in config_json and type(config_json['min_depth']) in (int, float):
-                config['min_depth'] = config_json['min_depth']
-            if 'max_dimension' in config_json and type(config_json['max_dimension']) in (int, float):
-                config['max_dimension'] = config_json['max_dimension']
-            if 'min_depth_for_colormap' in config_json and type(config_json['min_depth_for_colormap']) in (int, float):
-                config['min_depth_for_colormap'] = config_json['min_depth_for_colormap']
-            if 'max_depth_for_colormap' in config_json and type(config_json['max_depth_for_colormap']) in (int, float):
-                config['max_depth_for_colormap'] = config_json['max_depth_for_colormap']
-            if 'max_points_per_file' in config_json and type(config_json['max_points_per_file']) in (int, float):
-                config['max_points_per_file'] = config_json['max_points_per_file']
+            config_json = pyjson5.loads(config_file.read())
+            if 'units' in config_json:
+                units = config_json['units']
+                if units == 'metric':
+                    config['units'] = units
+                elif units == 'imperial':
+                    config['units'] = units
+                    unit_conversion_constant = meters_per_foot
+                else:
+                    print(f'Option units in config file "{units}" is invalid: must be "metric" or "imperial". Defaulting to {config["units"]}.')
+            if 'min_depth' in config_json:
+                min_depth = config_json['min_depth']
+                if type(min_depth) in (int, float) and min_depth >= 0:
+                    config['min_depth'] = config_json['min_depth'] * unit_conversion_constant
+                else:
+                    print(f'Option min_depth in config "{str(min_depth)}" file is invalid: must be nonnegative number. Defaulting to {config["min_depth"]}.')
+            if 'max_dimension' in config_json:
+                max_dimension = config_json['max_dimension']
+                if type(max_dimension) in (int, float) and max_dimension > 0:
+                    config['max_dimension'] = config_json['max_dimension']
+                else:
+                    print(f'Option max_dimension in config "{str(max_dimension)}" file is invalid: must be positive number. Defaulting to {config["max_dimension"]}.')
+            if 'min_depth_for_colormap' in config_json:
+                min_depth_for_colormap = config_json['min_depth_for_colormap']
+                if type(min_depth_for_colormap) in (int, float) and min_depth_for_colormap > 0:
+                    config['min_depth_for_colormap'] = config_json['min_depth_for_colormap']
+                else:
+                    print(f'Option min_depth_for_colormap in config "{str(min_depth_for_colormap)}" file is invalid: must be positive number. Defaulting to {config["min_depth_for_colormap"]}.')
+            if 'max_depth_for_colormap' in config_json:
+                max_depth_for_colormap = config_json['max_depth_for_colormap']
+                if type(max_depth_for_colormap) in (int, float) and max_depth_for_colormap > 0:
+                    config['max_depth_for_colormap'] = config_json['max_depth_for_colormap']
+                else:
+                    print(f'Option max_depth_for_colormap in config "{str(max_depth_for_colormap)}" file is invalid: must be positive number. Defaulting to {config["max_depth_for_colormap"]}.')
+            if 'max_points_per_file' in config_json:
+                max_points_per_file = config_json['max_points_per_file']
+                if type(max_points_per_file) == int:
+                    config['max_points_per_file'] = config_json['max_points_per_file']
+                else:
+                    print(f'Option max_points_per_file in config "{str(max_points_per_file)}" file is invalid: must be an integer. Defaulting to {config["max_points_per_file"]}.')
             if 'pin_colormap' in config_json and type(config_json['pin_colormap']) is str:
                 config['pin_colormap'] = config_json['pin_colormap']
             if 'map_colormap' in config_json and type(config_json['map_colormap']) is str:
                 config['map_colormap'] = config_json['map_colormap']
-            if 'units' in config_json and type(config_json['units']) in ('metric', 'imperial'):
-                config['units'] = config_json['units']
-            if 'verbose' in config_json and type(config_json['verbose']) is bool:
-                config['verbose'] = config_json['verbose']
+            if 'verbose' in config_json:
+                verbose = config['verbose']
+                if type(verbose) == bool:
+                    config['verbose'] = config_json['verbose']
+                else:
+                    print(f'Option verbose in config "{str(verbose)}" file is invalid: must be a boolean. Defaulting to {config["verbose"]}.')
     except FileNotFoundError:
-        print('No config.json file found. Using default values.')
+        print('No config file "{args.config}" found. Using default values.')
         config = default_config()
     except Exception as err:
-        print('Error while readong config.json file.')
+        print('Error while readong config file "{args.config}".')
         print(traceback.format_exc())
-        print('Using default config values')
+        print('Using default config values.')
         config = default_config()
 
 

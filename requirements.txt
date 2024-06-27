@@ -1,6 +1,7 @@
 earthpy
 numpy
 opencv-python
+pyjson5
 pyproj
 rasterio
 richdem
