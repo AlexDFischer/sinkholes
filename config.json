@@ -1,0 +1,11 @@
+{
+    "min_depth": 0.5,
+    "max_dimension": 300,
+    "min_depth_for_colormap": 0.5,
+    "max_depth_for_colormap": 6,
+    "max_points_per_file": 1000,
+    "pin_colormap": "gist_rainbow",
+    "map_colormap": "inferno_r",
+    "units": "metric",
+    "verbose": true
+}
