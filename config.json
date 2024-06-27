@@ -1,11 +1,11 @@
 {
-    "min_depth": 0.5,
-    "max_dimension": 300,
-    "min_depth_for_colormap": 0.5,
-    "max_depth_for_colormap": 6,
-    "max_points_per_file": 1000,
-    "pin_colormap": "gist_rainbow",
-    "map_colormap": "inferno_r",
-    "units": "metric",
-    "verbose": true
+    "units": "metric", # Unit system to use. Must be "metric" (meters) or "imperial" (feet).
+    "min_depth": 0.5, # Minimum depth for a sinkhole to be included. Sinkholes shallower than this are not included.
+    "max_dimension": 300, # Maximum dimension for a sinkhole to be included. Sinkholes with either east-west or north-south dimension larger than this are not included.
+    "min_depth_for_colormap": 0.5, # The depth-to-color mapping uses a scale that starts at this depth. All sinkholes shallower than this get the same color.
+    "max_depth_for_colormap": 6, # The depth-to-color mapping uses a scale that ends at this depth. All sinkholes deeper than this get the same color.
+    "max_points_per_file": -1, # If there are more than this number of sinkholes found, they are split up into multiple .geojson files. Set this to -1 to have no maximum. GaiaGPS allows no more than 1000 points per file when importing, so GaiaGPS users should set this to 1000.
+    "pin_colormap": "gist_rainbow", # matplotlib colormap name to use when setting the colors of the pins to be imported into your favorite map application. Pin colors are set via a log scale that starts at min_depth_for_colormap and ends at max_depth_for_colormap.
+    "map_colormap": "inferno_r", # matplotlib colormap name to use when setting the colors of the sinkholes highlighted in the GeoTIFF map. Sinkhole colors are set via a linear scale that starts at min_depth_for_colormap and ends at max_depth_for_colormap.
+    "verbose": true # Print extra information as the program runs.
 }
