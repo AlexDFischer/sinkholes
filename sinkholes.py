@@ -193,6 +193,7 @@ def export_sinkholes_geojson(sinkholes, output_filename, color_util, units='metr
 
 def default_config():
     return {
+        "units": "metric", # should be metric or imperial
         'min_depth': 0.5, # minimum depth for a sinkhole to be counted
         'max_dimension': 300, # sinkholes with either E-W size or N-S size larger than this are not counted
         'min_depth_for_colormap': 0.5, # colormap for depth starts at this value. Sinkholes shallower than this depth get color that indicates min depth
@@ -200,7 +201,6 @@ def default_config():
         'max_points_per_file': -1, # if there are more than this number of points, split them up into multiple files (useful because e.g. gaiagps can't handle more than 1000 points per file). Set it to -1 for no max
         "pin_colormap": "gist_rainbow", # matplotlib colormap name to use for pin color. Not recommended to be the same as map_depth_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
         "map_colormap": "inferno_r", # matplotlib colormap name to use for depth colorcoding in output map. Not recommended to be the same as pin_color_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
-        "units": "metric",
         "verbose": True
     }
 
