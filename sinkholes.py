@@ -240,19 +240,19 @@ if 'config' in args and args.config != None:
             if 'max_dimension' in config_json:
                 max_dimension = config_json['max_dimension']
                 if type(max_dimension) in (int, float) and max_dimension > 0:
-                    config['max_dimension'] = config_json['max_dimension']
+                    config['max_dimension'] = config_json['max_dimension'] * unit_conversion_constant
                 else:
                     print(f'Option max_dimension in config "{str(max_dimension)}" file is invalid: must be positive number. Defaulting to {config["max_dimension"]}.')
             if 'min_depth_for_colormap' in config_json:
                 min_depth_for_colormap = config_json['min_depth_for_colormap']
                 if type(min_depth_for_colormap) in (int, float) and min_depth_for_colormap > 0:
-                    config['min_depth_for_colormap'] = config_json['min_depth_for_colormap']
+                    config['min_depth_for_colormap'] = config_json['min_depth_for_colormap'] * unit_conversion_constant
                 else:
                     print(f'Option min_depth_for_colormap in config "{str(min_depth_for_colormap)}" file is invalid: must be positive number. Defaulting to {config["min_depth_for_colormap"]}.')
             if 'max_depth_for_colormap' in config_json:
                 max_depth_for_colormap = config_json['max_depth_for_colormap']
                 if type(max_depth_for_colormap) in (int, float) and max_depth_for_colormap > 0:
-                    config['max_depth_for_colormap'] = config_json['max_depth_for_colormap']
+                    config['max_depth_for_colormap'] = config_json['max_depth_for_colormap'] * unit_conversion_constant
                 else:
                     print(f'Option max_depth_for_colormap in config "{str(max_depth_for_colormap)}" file is invalid: must be positive number. Defaulting to {config["max_depth_for_colormap"]}.')
             if 'max_points_per_file' in config_json:
@@ -272,7 +272,7 @@ if 'config' in args and args.config != None:
                 else:
                     print(f'Option verbose in config "{str(verbose)}" file is invalid: must be a boolean. Defaulting to {config["verbose"]}.')
     except FileNotFoundError:
-        print('No config file "{args.config}" found. Using default values.')
+        print(f'No config file "{args.config}" found. Using default values.')
         config = default_config()
     except Exception as err:
         print('Error while readong config file "{args.config}".')

@@ -1,4 +1,4 @@
 output/
+inputDEMs/
 *.tif
 __pycache__/
-*.json
