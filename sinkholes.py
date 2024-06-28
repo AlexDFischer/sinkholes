@@ -201,8 +201,8 @@ def default_config():
         'max_points_per_file': -1, # if there are more than this number of points, split them up into multiple files (useful because e.g. gaiagps can't handle more than 1000 points per file). Set it to -1 for no max
         "pin_colormap": "gist_rainbow", # matplotlib colormap name to use for pin color. Not recommended to be the same as map_depth_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
         "map_colormap": "inferno_r", # matplotlib colormap name to use for depth colorcoding in output map. Not recommended to be the same as pin_color_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
-        "hillshade_azimuth": 315, # Sun angle for hillshade map. See desktop.arcgis.com/en/arcmap/latest/tools/spatial-analyst-toolbox/ for explanation
-        "hillshade_altitude": 45, # sun angle for hillshade map
+        "hillshade_azimuth": 315, # Sun azimuth angle for hillshade map. See desktop.arcgis.com/en/arcmap/latest/tools/spatial-analyst-toolbox/ for explanation
+        "hillshade_altitude": 30, # sun altitude angle for hillshade map
         "verbose": True,
     }
 
