@@ -5,3 +5,5 @@ pyjson5
 pyproj
 rasterio
 richdem
+wget
+requests
