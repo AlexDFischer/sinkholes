@@ -192,17 +192,18 @@ def export_sinkholes_geojson(sinkholes, output_filename, color_util, units='metr
         file.write(json.dumps(output, indent=4))
 
 def default_config():
+    # see config.jsonc for explanation of what these config options do
     return {
-        "units": "metric", # should be metric or imperial
-        'min_depth': 0.5, # minimum depth for a sinkhole to be counted
-        'max_dimension': 300, # sinkholes with either E-W size or N-S size larger than this are not counted
-        'min_depth_for_colormap': 0.5, # colormap for depth starts at this value. Sinkholes shallower than this depth get color that indicates min depth
-        'max_depth_for_colormap': 6, # colormap for depth ends at this value. Sinkholes deeper than this depth get color that indicates max depth
-        'max_points_per_file': -1, # if there are more than this number of points, split them up into multiple files (useful because e.g. gaiagps can't handle more than 1000 points per file). Set it to -1 for no max
-        "pin_colormap": "gist_rainbow", # matplotlib colormap name to use for pin color. Not recommended to be the same as map_depth_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
-        "map_colormap": "inferno_r", # matplotlib colormap name to use for depth colorcoding in output map. Not recommended to be the same as pin_color_colormap because pin_color_colormap will be used with a log scale, unlike map_depth_colormap
-        "hillshade_azimuth": 315, # Sun azimuth angle for hillshade map. See desktop.arcgis.com/en/arcmap/latest/tools/spatial-analyst-toolbox/ for explanation
-        "hillshade_altitude": 30, # sun altitude angle for hillshade map
+        "units": "metric",
+        'min_depth': 0.5,
+        'max_dimension': 300,
+        'min_depth_for_colormap': 0.5,
+        'max_depth_for_colormap': 6,
+        'max_points_per_file': -1,
+        "pin_colormap": "gist_rainbow",
+        "map_colormap": "inferno_r",
+        "hillshade_azimuth": 315,
+        "hillshade_altitude": 30,
         "verbose": True,
     }
 
@@ -268,19 +269,19 @@ if 'config' in args and args.config != None:
             if 'map_colormap' in config_json and type(config_json['map_colormap']) is str:
                 config['map_colormap'] = config_json['map_colormap']
             if 'hillshade_azimuth' in config_json:
-                hillshade_azimuth = config['hillshade_azimuth']
+                hillshade_azimuth = config_json['hillshade_azimuth']
                 if type(hillshade_azimuth) in (int, float):
                     config['hillshade_azimuth'] = hillshade_azimuth
                 else:
                     print(f'Option hillshade_azimuth in config file "{str(hillshade_azimuth)}" is invalid: must be a number. Defaulting to {config["hillshade_azimuth"]}.')
             if 'hillshade_altitude' in config_json:
-                hillshade_altitude = config['hillshade_altitude']
+                hillshade_altitude = config_json['hillshade_altitude']
                 if type(hillshade_altitude) in (int, float):
                     config['hillshade_altitude'] = hillshade_altitude
                 else:
                     print(f'Option hillshade_altitude in config file "{str(hillshade_altitude)}" is invalid: must be a number. Defaulting to {config["hillshade_altitude"]}.')
             if 'verbose' in config_json:
-                verbose = config['verbose']
+                verbose = config_json['verbose']
                 if type(verbose) == bool:
                     config['verbose'] = config_json['verbose']
                 else:
@@ -289,9 +290,8 @@ if 'config' in args and args.config != None:
         print(f'No config file "{args.config}" found. Using default values.')
         config = default_config()
     except Exception as err:
-        print('Error while readong config file "{args.config}".')
+        print(f'Error while readong config file "{args.config}". Using default config values. Exception stacktrace:')
         print(traceback.format_exc())
-        print('Using default config values.')
         config = default_config()
 
 
