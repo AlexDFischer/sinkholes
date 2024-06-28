@@ -30,6 +30,8 @@
     <h2>Acquire the data</h2>
 
     <p>Now you have to get the LIDAR data for the area you're interested in from the USGS. The USGS publishes this data in 10 km by 10 km squares. The data is available for much of the US, and the USGS plans to gather this data for the entire US eventually.</p>
+
+    <p>If the USGS has coverage for the area you're searching for, you can use the script to download it using the <span class="code">--area</span> command and pasting in the lat,lons for two corners defining the bounding box of your search area. For example,  <span class="code">python sinkholes.py --area "33.00733, -105.53657, 32.92034, -105.44257"</span>  </p>
         
     <p>To find the lidar data for the area you're interested in, go to the USGS's <a href="https://apps.nationalmap.gov/downloader/">GIS Data Download</a> page. Check the "Elevation Products (3DEP) option on the left:</p>
 

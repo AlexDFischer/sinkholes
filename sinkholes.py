@@ -18,12 +18,74 @@ import time
 import argparse
 import traceback
 import uuid
+from pathlib import Path
+import requests
+import wget
 
 from sinkhole import Sinkhole
 from util import feet_per_meter, meters_per_foot, gaia_datetime_format
 from color_utils import ColorUtil
 
 wgs84_name = 'EPSG:4326'
+
+
+
+def download_dems(bounding_box, data_dir=None):
+    """Downloads 1m geoTIFF files in a given area from USGS servers.
+    Args:
+        bounding_box (str): two corners of rectangle defining search area in format 'lat1, lon1, lat2, lon2'
+        data_dir (Path): directory in which to store downloaded files. Defaults to ./inputDEMs/
+    Returns:
+        filenames (list(str)): string representation of paths to downloaded files"""
+    
+    # reformat the bounding box to match the query syntax
+    y1, x1, y2, x2 = list(map(float, bounding_box.split(','))) 
+    ulx = min(x1, x2)
+    uly = max(y1, y2)
+    lrx = max(x1, x2)
+    lry = min(y1, y2)
+    bounding_box = f"{ulx}, {uly}, {lrx}, {lry}"
+    if data_dir is None:
+        data_dir = Path("./inputDEMs/")
+    data_dir.mkdir(exist_ok=True)
+
+    opr_dataset = "Original%20Product%20Resolution%20(OPR)%20Digital%20Elevation%20Model%20(DEM)"
+    dem_1m_dataset = "Digital%20Elevation%20Model%20(DEM)%201%20meter"
+    for dataset in [dem_1m_dataset]: # can also set to [opr_dataset, dem_1m_dataset] if higher res desired
+        url = f"https://tnmaccess.nationalmap.gov/api/v1/products?&datasets={dataset}&bbox={bounding_box}&prodFormats=&max=1000&offset=0"
+        
+        try:
+            result = requests.get(url=url, timeout=10)
+        except requests.exceptions.ReadTimeout:
+            print(f"{url} failed to elicit a reply")
+            raise
+        results = [(item['title'], item['downloadURL']) for item in json.loads(result.text)["items"]]
+        if len(results) > 0: break
+
+    if results: results = [results[0]]  #TODO: for now, just download the first result. In the long run, join all results and crop to bounding box
+    
+    # check total download size to make sure we aren't accidentally overloading the servers
+    tot_size = 0
+    MAX_DL_SIZE = 500 # in megabytes
+    for result in results:
+        response = requests.head(result[1], allow_redirects=True)
+        size = int(response.headers.get('content-length', -1), )
+        tot_size += size
+    tot_size = tot_size / float(1 << 20) # convert to MB
+    if tot_size > MAX_DL_SIZE:
+        raise ValueError(f'Asking for {tot_size} MB, be kind to our poor government servers')
+    
+    filenames = []
+    # download results
+    for result in results:
+        url = result[1]
+        filepath = data_dir.joinpath(url.split('/')[-1])
+        if not filepath.exists(): #check if already downloaded
+            wget.download(url, out=str(filepath))
+        filenames.append(str(filepath))
+
+    return filenames
+
 
 def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_output_filename,
                     config,
@@ -212,10 +274,12 @@ parser.add_argument('-i', '--input', action='store')
 parser.add_argument('-otif', '--output-geotiff')
 parser.add_argument('-ojson', '--output-geojson')
 parser.add_argument('-c', '--config')
+parser.add_argument('--area', action="store")
 args = parser.parse_args()
 
-if not ('input' in args and args.input != None):
-    print('Must have --input (or -i) argument that specifies input .tif file with digital elevation model.')
+if not ('input' in args and args.input != None) and args.area is None:
+    print('Must have --input (or -i) argument that specifies input .tif file with digital elevation model \
+or specify an area for which to download DEMs using --area')
     exit(1)
 
 # parse config file
@@ -295,7 +359,14 @@ if 'config' in args and args.config != None:
         config = default_config()
 
 
-input = args.input
+if args.input is not None:
+    input_file = args.input
+if args.area is not None:
+    dems = download_dems(args.area)
+    if dems == []:
+        print('No DEMs were found for that search area')
+        exit(1)
+    input_file = dems[0]
 
 output_geotiff = 'output_geotiff' in args and args.output_geotiff != None
 output_geojson = 'output_geojson' in args and args.output_geojson != None
@@ -311,7 +382,7 @@ if config['verbose']:
     print('Using config object:')
     print(json.dumps(config, indent=4))
 
-process_geotiff(input, output_geotiff_fname, output_geojson_fname,
+process_geotiff(input_file, output_geotiff_fname, output_geojson_fname,
                 config=config,
                 output_geotiff=output_geotiff,
                 output_geojson=output_geojson)
