@@ -125,6 +125,7 @@ def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_o
         img[:, nonzero_diff_index] = diff_colors
   
         del nonzero_diff_index # save some memory
+        del diff_colors
         gc.collect()
 
         output_profile = geotiff_input.profile
@@ -143,7 +144,7 @@ def process_geotiff(geotiff_input_filename, geotiff_output_filename, sinkholes_o
         sinkholes = sinkholes_from_diff(diff, geotiff_input, elevation, config['min_depth'], config['max_dimension'])
         time_after_sinkholes = time.time()
         print(f'Found {len(sinkholes)} sinkholes. Elapsed time making sinkhole objects: {time_after_sinkholes - time_before_sinkholes:.2f} s.')
-        export_sinkholes_geojson(sinkholes, sinkholes_output_filename, color_util, units=config['units'], max_points_per_file=config['max_points_per_file'])
+        export_sinkholes_geojson(sinkholes, sinkholes_output_filename, color_util, config)
         print('Exported sinkhole objects to geojson file(s).')
     
 
@@ -190,11 +191,13 @@ def sinkholes_from_diff(diff, geotiff_input, elevation, min_depth, max_dimension
 
     return sinkholes
 
-def export_sinkholes_geojson(sinkholes, output_filename, color_util, units='metric', max_points_per_file=-1):
+def export_sinkholes_geojson(sinkholes, output_filename, color_util, config):
     if output_filename == None or output_filename == '':
         raise ValueError('Must specify an output filename')
     
     folder_uuid = uuid.uuid4()
+    units = config['units']
+    max_points_per_file = config['max_points_per_file']
 
     if max_points_per_file > 0 and len(sinkholes) > max_points_per_file:
         # split up the sinkholes into multiple files
@@ -212,7 +215,7 @@ def export_sinkholes_geojson(sinkholes, output_filename, color_util, units='metr
         num_decimal_digits = math.ceil(math.log10(num_files))
         for i in range(num_files):
             new_output_fname = fname_prefix + ('_{:0' + str(num_decimal_digits) + 'n}').format(i) + fname_extension
-            export_sinkholes_geojson(sinkholes[i * max_points_per_file : (i+1) * max_points_per_file], new_output_fname, color_util, units)
+            export_sinkholes_geojson(sinkholes[i * max_points_per_file : (i+1) * max_points_per_file], new_output_fname, color_util, config)
     else:
         unit_conversion = None
         unit_str = None
@@ -235,7 +238,8 @@ def export_sinkholes_geojson(sinkholes, output_filename, color_util, units='metr
                 "updated_date": now.strftime(gaia_datetime_format),
                 "time_created": now.strftime(gaia_datetime_format),
                 "notes": f"""{len(sinkholes)} sinkholes automatically detected by caves.science.
-                                Depths range from {min_depth * unit_conversion}:.1f {unit_str} to {max_depth * unit_conversion:.1f} {unit_str}."""
+                                Depths range from {min_depth * unit_conversion}:.1f {unit_str} to {max_depth * unit_conversion:.1f} {unit_str}.""",
+                "config": config
             },
             "features": [{ # folder info for Caltopo
                 "geometry": None,
