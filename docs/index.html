@@ -15,6 +15,9 @@
 </head>
 <body>
     <h1>Automatically detect sinkholes: step-by-step instructions</h1>
+
+    <p>By <a href="https://alexfischer.science">Alex Fischer</a>. Contact info: alexander dot fisher 3 at gmail dot com, <a href="https://www.facebook.com/alexdavidfischer/">Facebook</a>.</p>
+
     <p>This program takes in 1 meter digital elevation models (DEM's) made from lidar data that the US Geological Survey publishes, and processes the data to automatically detect sinkholes. It exports the sinkholes to a GeoJSON file that contains all the sinkholes as waypoints color-coded by depth, that can be imported into mapping applications such as GaiaGPS, CalTopo, and Google Earth. It also exports a GeoTIFF map file that has a hillshade map with the sinkholes highlighted and colorcoded by depth. This map file can be imported into CalTopo and Avenza to use as a map layer. Expect it to use about 2.8 GB of RAM to process a 10 km by 10 km USGS quad.</p>
 
     <p>This program detects sinkholes by looking for local minima in the landscape, where water cannot drain away. It uses the <a href="https://doi.org/10.1016/j.cageo.2013.04.024">Priority-Flood algorithm from Barnes, Lehman, Mulla 2014</a>. Specifically it uses the <a href="https://doi.org/10.1016/j.cageo.2016.02.021">efficient implementation from Zhou, Sun, Fu 2016</a>.</p>
