@@ -1,84 +1,135 @@
 <!DOCTYPE html>
+
 <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-4NF88NCZ2L"></script>
     <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
 
-    gtag('config', 'G-4NF88NCZ2L');
+        gtag('config', 'G-4NF88NCZ2L');
     </script>
 
     <title>Find sinkholes</title>
     <link href="style.css" rel="stylesheet">
 </head>
+
 <body>
     <h1>Automatically detect sinkholes: step-by-step instructions</h1>
 
-    <p>By <a href="https://alexfischer.science">Alex Fischer</a>. Contact info: alexander dot fischer 3 at gmail dot com, <a href="https://www.facebook.com/alexdavidfischer/">Facebook</a>.</p>
+    <p>By <a href="https://alexfischer.science">Alex Fischer</a>. Contact info: alexander dot fischer 3 at gmail dot
+        com, <a href="https://www.facebook.com/alexdavidfischer/">Facebook</a>.</p>
 
-    <p>This program takes in 1 meter digital elevation models (DEM's) made from lidar data that the US Geological Survey publishes, and processes the data to automatically detect sinkholes. It exports the sinkholes to a GeoJSON file that contains all the sinkholes as waypoints color-coded by depth, that can be imported into mapping applications such as GaiaGPS, CalTopo, and Google Earth. It also exports a GeoTIFF map file that has a hillshade map with the sinkholes highlighted and colorcoded by depth. This map file can be imported into CalTopo and Avenza to use as a map layer. Expect it to use about 2.8 GB of RAM to process a 10 km by 10 km USGS quad.</p>
+    <p>This program takes in 1 meter digital elevation models (DEM's) made from LIDAR data that the US Geological Survey
+        publishes, and processes the data to automatically detect sinkholes. It exports the sinkholes to a GeoJSON file
+        that contains all the sinkholes as waypoints color-coded by depth, that can be imported into mapping
+        applications such as GaiaGPS, CalTopo, and Google Earth. It also exports a GeoTIFF map file that has a hillshade
+        map with the sinkholes highlighted and colorcoded by depth. This map file can be imported into CalTopo and
+        Avenza to use as a map layer. Expect it to use about 2.8 GB of RAM to process a 10 km by 10 km USGS quad.</p>
 
-    <p>This program detects sinkholes by looking for local minima in the landscape, where water cannot drain away. It uses the <a href="https://doi.org/10.1016/j.cageo.2013.04.024">Priority-Flood algorithm from Barnes, Lehman, Mulla 2014</a>. Specifically it uses the <a href="https://doi.org/10.1016/j.cageo.2016.02.021">efficient implementation from Zhou, Sun, Fu 2016</a>.</p>
+    <p>This program detects sinkholes by looking for local minima in the landscape, where water cannot drain away. It
+        uses the <a href="https://doi.org/10.1016/j.cageo.2013.04.024">Priority-Flood algorithm from Barnes, Lehman,
+            Mulla 2014</a>. Specifically it uses the <a href="https://doi.org/10.1016/j.cageo.2016.02.021">efficient
+            implementation from Zhou, Sun, Fu 2016</a>.</p>
 
     <h2>Setup the script/install dependencies</h2>
 
-    <p>This script uses Python; make sure you have Python 3 installed. Get the script files by <a href="https://github.com/AlexDFischer/sinkholes/archive/refs/heads/master.zip">downloading from GitHub</a> or by <a href="https://github.com/AlexDFischer/sinkholes">cloning the repository</a>.</p>
+    <p>This script uses Python; make sure you have Python 3 installed. Get the script files by <a
+            href="https://github.com/AlexDFischer/sinkholes/archive/refs/heads/master.zip">downloading from GitHub</a>
+        or by <a href="https://github.com/AlexDFischer/sinkholes">cloning the repository</a>.</p>
 
-    <p>Next, install the required Python packages in <span class="code">requirements.txt</span>. You can do this using pip via <span class="code">pip install -r requirements.txt</span>. Now you're ready to use the script that is at <span class="code">sinkholes.py</span>.</p>
+    <p>Next, install the required Python packages in <span class="code">requirements.txt</span>. You can do this using
+        pip via <span class="code">pip install -r requirements.txt</span>. Now you're ready to use the script that is at
+        <span class="code">sinkholes.py</span>.
+    </p>
 
-    <p>The richdem package sometimes doesn't install properly using pip with Python versions >= 3.10. If you have trouble installing richdem, try using Python 3.9 instead. Or you can <a href="https://github.com/r-barnes/richdem/issues/65#issuecomment-1792523010">install richdem using using conda</a>, or <a href="https://github.com/r-barnes/richdem/releases">build from source</a>.</p>
+    <p>The richdem package sometimes doesn't install properly using pip with Python versions >= 3.10. If you have
+        trouble installing richdem, try using Python 3.9 instead. Or you can <a
+            href="https://github.com/r-barnes/richdem/issues/65#issuecomment-1792523010">install richdem using using
+            conda</a>, or <a href="https://github.com/r-barnes/richdem/releases">build from source</a>.</p>
 
     <h2>Acquire the data</h2>
 
-    <p>Now you have to get the LIDAR data for the area you're interested in from the USGS. The USGS publishes this data in 10 km by 10 km squares. The data is available for much of the US, and the USGS plans to gather this data for the entire US eventually.</p>
+    <p>Now you have to get the LIDAR data for the area you're interested in from the USGS. The USGS publishes this data
+        in 10 km by 10 km squares. The data is available for much of the US, and the USGS plans to gather this data for
+        the entire US eventually.</p>
 
-    <p>If the USGS has coverage for the area you're searching for, you can use the script to download it using the <span class="code">--area</span> command and pasting in the lat,lons for two corners defining the bounding box of your search area. For example,  <span class="code">python sinkholes.py --area "33.00733, -105.53657, 32.92034, -105.44257"</span>  </p>
-        
-    <p>To find the lidar data for the area you're interested in, go to the USGS's <a href="https://apps.nationalmap.gov/downloader/">GIS Data Download</a> page. Check the "Elevation Products (3DEP) option on the left:</p>
+    <!--<p>If the USGS has coverage for the area you're searching for, you can use the script to download it using the <span class="code">--area</span> command and pasting in the lat,lons for two corners defining the bounding box of your search area. For example,  <span class="code">python sinkholes.py --area "33.00733, -105.53657, 32.92034, -105.44257"</span>  </p>-->
+
+    <p>To find the LIDAR data for the area you're interested in, go to the USGS's <a
+            href="https://apps.nationalmap.gov/downloader/">GIS Data Download</a> page. Check the "Elevation Products
+        (3DEP) option on the left:</p>
 
     <img src="stepByStep_start.png" class="stepByStepImg" />
 
-    <p>Then check the "1 meter DEM" option, and uncheck all other options. Then click "Show Availability" at the bottom:</p>
+    <p>Then check the "1 meter DEM" option, and uncheck all other options. Then click "Show Availability" at the bottom:
+    </p>
 
     <img src="stepByStep_1mDEM.png" class="stepByStepImg" />
 
-    <p>After you click "Show Availability", the map on the right will be shaded dark where 1 meter DEM data is available:</p>
-    
+    <p>After you click "Show Availability", the map on the right will be shaded dark where 1 meter DEM data is
+        available:</p>
+
     <img src="stepByStep_availability.png" class="stepByStepImg" />
 
-    <p>Zoom in on the area you're interested in, making sure that 1 meter DEM data is available for that area. Then click "Search Products" in the upper left corner:</p>
-    
+    <p>Zoom in on the area you're interested in, making sure that 1 meter DEM data is available for that area. Then
+        click "Search Products" in the upper left corner:</p>
+
     <img src="stepByStep_searchProducts.png" class="stepByStepImg" />
 
-    <p>The page will then list the 1 meter DEM files available for download in the area you zoomed in on. Hovering over an option on the left will highlight the area it covers on the map on the right. If there are too many options, keep in mind that each file covers a 10 km by 10 km square, and zoom in if necessary to narrow down the area you're searching. Click "Download Link (TIF)" for the option(s) you want to download the GeoTIFF file with the 1 meter DEM data:</p>
-    
+    <p>The page will then list the 1 meter DEM files available for download in the area you zoomed in on. Hovering over
+        an option on the left will highlight the area it covers on the map on the right. If there are too many options,
+        keep in mind that each file covers a 10 km by 10 km square, and zoom in if necessary to narrow down the area
+        you're searching. Click "Download Link (TIF)" for the option(s) you want to download the GeoTIFF file with the 1
+        meter DEM data:</p>
+
     <img src="stepByStep_download.png" class="stepByStepImg" />
 
     <h2>Run the script</h2>
 
     <p>You can execute the script with the following command:
-        
-    <p><span class="code">python sinkholes.py -i &lt;input-geotiff-filename.tif&gt; -otif &lt;output-geotiff-filename.tif&gt; -ojson &lt;output-geojson-filename.geojson&gt;</span></p>
-    
-    <p>The <span class="code">-i</span> flag is the name of the file with the LIDAR data you downloaded from the USGS. The <span class="code">-otif</span> flag is the name of the file to which it saves the hillshade map with sinkholes highlighted. You can omit this flag if you don't want to export a hillshade map. The <span class="code">-ojson</span> flag is the name of the file to which it saves the list of sinkholes points that can be imported into GaiaGPS, CalTopo, Google Earth, etc. You can omit this flag if you don't want to export a list of sinkhole points.</p>
 
-    <p>You can add a flag <span class="code">-c &lt;config-file-name.json&gt;</span> to include a config file that allows you to change some settings. An example config file with all the default settings is in <span class="code">config.json</span>. If you're using GaiaGPS, you'll want to set <span class="code">max_points_per_file</span> to 1000, to split the list of sinkhole points over multiple files if there are more than 1000, because GaiaGPS doesn't let you import more than 1000 objects per file.</p>
+    <p><span class="code">python sinkholes.py -i &lt;input-geotiff-filename.tif&gt; -otif
+            &lt;output-geotiff-filename.tif&gt; -ojson &lt;output-geojson-filename.geojson&gt;</span></p>
+
+    <p>The <span class="code">-i</span> flag is the name of the file with the LIDAR data you downloaded from the USGS.
+        The <span class="code">-otif</span> flag is the name of the file to which it saves the hillshade map with
+        sinkholes highlighted. You can omit this flag if you don't want to export a hillshade map. The <span
+            class="code">-ojson</span> flag is the name of the file to which it saves the list of sinkholes points that
+        can be imported into GaiaGPS, CalTopo, Google Earth, etc. You can omit this flag if you don't want to export a
+        list of sinkhole points.</p>
+
+    <p>You can add a flag <span class="code">-c &lt;config-file-name.json&gt;</span> to include a config file that
+        allows you to change some settings. An example config file with all the default settings is in <span
+            class="code">config.json</span>. If you're using GaiaGPS, you'll want to set <span
+            class="code">max_points_per_file</span> to 1000, to split the list of sinkhole points over multiple files if
+        there are more than 1000, because GaiaGPS doesn't let you import more than 1000 objects per file.</p>
 
     <p>The GeoTIFF file exported by the program is a hillshade map with sinkholes highlighted by depth, like so:</p>
 
     <img src="hillshadeExample.png" width="1010px" />
 
-    <p>This map file has GPS information built in and can be imported into CalTopo and Avenza to use as a map layer. The depth of the sinkhole is shown by the color. Light yellow is 0.5 m by default and black is 6 m deep by default. These default values can be changed in the config file; they are the keys <span class="code">min_depth_for_colormap</span> (default value 0.5 m) and <span class="code">max_depth_for_colormap</span> (default value 6 m).</p>
-    
+    <p>This map file has GPS information built in and can be imported into CalTopo and Avenza to use as a map layer. The
+        depth of the sinkhole is shown by the color. Light yellow is 0.5 m by default and black is 6 m deep by default.
+        These default values can be changed in the config file; they are the keys <span
+            class="code">min_depth_for_colormap</span> (default value 0.5 m) and <span
+            class="code">max_depth_for_colormap</span> (default value 6 m).</p>
+
     <p></p>The sinkholes imported will look something like this:</p>
 
     <img src="pointsExample.png" />
 
-    <p>Generally, the script finds many "sinkholes" in streambeds that are just small pools or natural dams in the streambed that make a small depression. Additionally, streams that cross under roads via culverts or bridges are likely to show up as "sinkholes". These many sinkholes in streambeds should usually be ignored in favor of the ones outside of streambeds, which are more likely to be actual karst sinkholes. However, sometimes cave entrances can be in streambeds, so don't necessarily write off all sinkholes found in streambeds!</p>
+    <p>Generally, the script finds many "sinkholes" in streambeds that are just small pools or natural dams in the
+        streambed that make a small depression. Additionally, streams that cross under roads via culverts or bridges are
+        likely to show up as "sinkholes". These many sinkholes in streambeds should usually be ignored in favor of the
+        ones outside of streambeds, which are more likely to be actual karst sinkholes. However, sometimes cave
+        entrances can be in streambeds, so don't necessarily write off all sinkholes found in streambeds!</p>
 
-    <p>The sinkholes are colorcoded by depth. The points in CalTopo have their color continuously vary from red (at the default minimum depth of 0.5 m) to purple (at 6 m, and all deeper sinkholes have the same color) according to colors of the rainbow, using a log scale. GaiaGPS has a small set of allowed colors, and the depth maps to those colors using that same rainbow-log-scale:</p>
+    <p>The sinkholes are colorcoded by depth. The points in CalTopo have their color continuously vary from red (at the
+        default minimum depth of 0.5 m) to purple (at 6 m, and all deeper sinkholes have the same color) according to
+        colors of the rainbow, using a log scale. GaiaGPS has a small set of allowed colors, and the depth maps to those
+        colors using that same rainbow-log-scale:</p>
 
     <ul>
         <li>Red for 0 &le; depth &lt; 0.62 m</li>
@@ -89,5 +140,7 @@
         <li>Purple for 3.22 m &le; depth</li>
     </ul>
 
-    <p>These min and max values for the colormap log scale can be changed in the config file; they are the keys <span class="code">min_depth_for_colormap</span> (default value 0.5 m) and <span class="code">max_depth_for_colormap</span> (default value 6 m).</p>
+    <p>These min and max values for the colormap log scale can be changed in the config file; they are the keys <span
+            class="code">min_depth_for_colormap</span> (default value 0.5 m) and <span
+            class="code">max_depth_for_colormap</span> (default value 6 m).</p>
 </body>
