@@ -1,6 +1,6 @@
 earthpy
 numpy
-opencv-python
+opencv-python-headless
 pyjson5
 pyproj
 rasterio
