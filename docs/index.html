@@ -25,7 +25,7 @@
         publishes, and processes the data to automatically detect sinkholes. It exports the sinkholes to a GeoJSON file
         that contains all the sinkholes as waypoints color-coded by depth, that can be imported into mapping
         applications such as GaiaGPS, CalTopo, and Google Earth. It also exports a GeoTIFF map file that has a hillshade
-        map with the sinkholes highlighted and colorcoded by depth. This map file can be imported into CalTopo and
+        map with the sinkholes highlighted and colorcoded by depth. This map file can be imported into QGIS or
         Avenza to use as a map layer. Expect it to use about 2.8 GB of RAM to process a 10 km by 10 km USGS quad.</p>
 
     <p>This program detects sinkholes by looking for local minima in the landscape, where water cannot drain away. It
@@ -110,7 +110,7 @@
 
     <img src="hillshadeExample.png" width="1010px" />
 
-    <p>This map file has GPS information built in and can be imported into CalTopo and Avenza to use as a map layer. The
+    <p>This map file has GPS information built in and can be imported into QGIS or Avenza to use as a map layer. The
         depth of the sinkhole is shown by the color. Light yellow is 0.5 m by default and black is 6 m deep by default.
         These default values can be changed in the config file; they are the keys <span
             class="code">min_depth_for_colormap</span> (default value 0.5 m) and <span
