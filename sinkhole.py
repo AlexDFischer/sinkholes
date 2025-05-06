@@ -66,7 +66,7 @@ class Sinkhole:
                 "notes": f"elevation: {int(round(self.elevation * unit_conversion))} {unit_str}\narea: {self.area*unit_conversion**2} {unit_str}^2",
                 "latitude": self.lat,
                 "longitude": self.long,
-                "elevation": self.elevation,
+                "elevation": str(self.elevation), # str() to explicitly convert np.float32 to a string, as rastorio returns a numpy float array
                 "marker_type": "pin",
                 "marker-color": rgb_to_hex(color_util.depth_to_pin_color(self.depth)),
                 "folderId": folder_uuid.hex
