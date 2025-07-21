@@ -1,4 +1,4 @@
-{
+﻿{
     "units": "metric", // Unit system to use. Must be "metric" (meters) or "imperial" (feet).
     "min_depth": 0.5, // Minimum depth for a sinkhole to be included. Sinkholes shallower than this
                       // are not included.

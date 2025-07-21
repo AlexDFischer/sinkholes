@@ -1,10 +1,13 @@
 #!/bin/python3
 
 from datetime import datetime
+from uuid import UUID
+from color_utils import ColorUtil
 from util import feet_per_meter, gaia_datetime_format, meters_per_foot
 
+
 def rgb_to_hex(rgb):
-    """input: array with 3 values, red, green, and blue, which are floats in [0, 1]
+    """input: array with 3 values, red, green, and blue, which are ints in [0, 255]
     Return color as #RRGGBB for the given color values."""
     return '#%02X%02X%02X' % (rgb[0], rgb[1], rgb[2])
 
@@ -18,8 +21,9 @@ class Sinkhole:
         elif units == 'imperial':
             unit_conversion = meters_per_foot
         else:
-            raise ValueError(f'Error: `"units`" was \"{units}\", but the only allowed values are \"metric\" or \"imperial\".')
-        
+            raise ValueError(
+                f'Error: `"units`" was \"{units}\", but the only allowed values are \"metric\" or \"imperial\".')
+
         self.depth = depth * unit_conversion
         self.lat = lat
         self.long = long
@@ -28,8 +32,8 @@ class Sinkhole:
         self.elevation = elevation * unit_conversion
         self.area = area * unit_conversion * unit_conversion
         self.time = datetime.now()
-    
-    def json_obj(self, color_util, folder_uuid, units='metric'):
+
+    def json_obj(self, color_util: ColorUtil, folder_uuid: UUID, units='metric'):
         unit_conversion = None
         unit_str = None
         if units == 'metric':
@@ -39,14 +43,16 @@ class Sinkhole:
             unit_conversion = feet_per_meter
             unit_str = 'ft'
         else:
-            raise ValueError(f'Error: `"units`" was \"{units}\", but the only allowed values are \"metric\" or \"imperial\".')
-        
+            raise ValueError(
+                f'Error: `"units`" was \"{units}\", but the only allowed values are \"metric\" or \"imperial\".')
+
         title = "sinkhole {:.1f}d".format(self.depth * unit_conversion)
         if self.width != 0 and self.length != 0:
-            title += " {:.1f}w {:.1f}l".format(self.width * unit_conversion, self.length * unit_conversion)
-        
+            title += " {:.1f}w {:.1f}l".format(self.width *
+                                               unit_conversion, self.length * unit_conversion)
+
         time_str = self.time.strftime(gaia_datetime_format)
-        
+
         return {
             "type": "Feature",
             "geometry": {
