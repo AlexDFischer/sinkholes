@@ -22,7 +22,7 @@ import wget
 
 from config import Config
 from sinkhole import Sinkhole
-from util import feet_per_meter, meters_per_foot, gaia_datetime_format
+from util import feet_per_meter, gaia_datetime_format
 from color_utils import ColorUtil
 
 wgs84_name = 'EPSG:4326'
@@ -155,8 +155,7 @@ def process_geotiff(config: Config,
             print(color_util.gaia_colormap_string(config.units))
 
         time_before_sinkholes = time.time()
-        sinkholes = sinkholes_from_diff(
-            diff, geotiff_input, elevation, config.min_depth, config.max_dimension)
+        sinkholes = sinkholes_from_diff(diff, geotiff_input, elevation, config.min_depth, config.max_dimension)
         time_after_sinkholes = time.time()
         print(f'Found {len(sinkholes)} sinkholes. Elapsed time making sinkhole objects: {time_after_sinkholes - time_before_sinkholes:.2f} s.')
         if sinkholes_output_filename != None:
@@ -168,18 +167,32 @@ def process_geotiff(config: Config,
             pass
 
 
-def sinkholes_from_diff(diff, geotiff_input, elevation, min_depth: float, max_dimension: float):
+def sinkholes_from_diff(diff,
+                        geotiff_input,
+                        elevation,
+                        min_depth: float,
+                        max_dimension: float) -> list[Sinkhole]:
     """max dimension is the maximum width or length allowed for a sinkhole before we no longer include it"""
+
+    print('Entered sinkholes_from_diff')
 
     # make wgs84_transformer object, that transforms from the built in coordinate reference system of the geotiff we're reading
     wgs84_transformer = pyproj.Transformer.from_crs(
         pyproj.CRS(str(geotiff_input.crs)), pyproj.CRS(wgs84_name))
+    print('Constructed wgs84_transformer')
 
-    diffs_nonzero = ((diff >= min_depth) * 1).astype(np.uint8)
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-        diffs_nonzero, connectivity=4, ltype=cv2.CV_16U)
+    diffs_nonzero = (diff > 0).astype(np.uint8)
+    gc.collect() # Above expression generates lots of big numpy arrays we don't need
 
-    sinkholes = []
+    print('Computed nonzero diffs')
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStatsWithAlgorithm(
+        diffs_nonzero,
+        connectivity=4,
+        ltype=cv2.CV_16U,
+        ccltype=cv2.CCL_WU)
+
+    print(f'Found {num_labels} connected components in diff')
+    sinkholes: list[Sinkhole] = []
 
     max_depths = np.zeros((num_labels))
     max_depth_locations = np.zeros((num_labels, 2))
@@ -190,11 +203,12 @@ def sinkholes_from_diff(diff, geotiff_input, elevation, min_depth: float, max_di
             if depth > max_depths[label]:
                 max_depths[label] = depth
                 max_depth_locations[label] = [row, col]
+    print('Computed max depths and locations for each label')
 
     for label in range(num_labels):
         width = stats[label, cv2.CC_STAT_WIDTH]
         length = stats[label, cv2.CC_STAT_HEIGHT]
-        if width <= max_dimension and length <= max_dimension:
+        if max_depths[label] >= min_depth and width <= max_dimension and length <= max_dimension:
             row = max_depth_locations[label, 0]
             col = max_depth_locations[label, 1]
             input_crs_coords = geotiff_input.transform * (col, row)
@@ -212,6 +226,7 @@ def sinkholes_from_diff(diff, geotiff_input, elevation, min_depth: float, max_di
                                 area=stats[label, cv2.CC_STAT_AREA])
             sinkholes.append(sinkhole)
 
+    print('Returned sinkholes from diff')
     return sinkholes
 
 
