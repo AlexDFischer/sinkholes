@@ -14,7 +14,15 @@ def rgb_to_hex(rgb):
 
 class Sinkhole:
 
-    def __init__(self, depth, lat, long, width=0, length=0, elevation=None, area=0, units='metric'):
+    def __init__(self,
+                 depth: float,
+                 lat: float,
+                 long: float,
+                 width: float=0.0,
+                 length: float=0.0,
+                 elevation: float=0.0,
+                 area: float=0,
+                 units: str='metric'):
         unit_conversion = None
         if units == 'metric':
             unit_conversion = 1.0
