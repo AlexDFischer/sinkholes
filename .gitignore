@@ -1,4 +1,6 @@
-output/
-inputDEMs/
-*.tif
+output/*
+!output/.gitkeep
+inputDEMs/*
+!inputDEMs/.gitkeep
 __pycache__/
+.DS_Store
