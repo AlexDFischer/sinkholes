@@ -1,0 +1,17 @@
+name: sinkholes
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - gdal
+  - richdem
+  - rasterio
+  - pip
+  - pip:
+    - earthpy
+    - numpy
+    - opencv-python-headless
+    - pyjson5
+    - pyproj
+    - wget
+    - requests
