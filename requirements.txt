@@ -4,6 +4,6 @@ opencv-python-headless
 pyjson5
 pyproj
 rasterio
-richdem
+richdem-fork
 wget
 requests

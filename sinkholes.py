@@ -8,9 +8,6 @@ import gc
 import json
 import pyproj
 import rasterio
-import rasterio.features
-import rasterio.transform
-import rasterio.warp
 import richdem as rd
 import cv2
 import pyjson5
@@ -21,6 +18,7 @@ import uuid
 from pathlib import Path
 import requests
 import wget
+import os
 
 from sinkhole import Sinkhole
 from util import feet_per_meter, meters_per_foot, gaia_datetime_format
@@ -273,120 +271,133 @@ def default_config():
         "verbose": True,
     }
 
-parser = argparse.ArgumentParser(prog="Find Sinkholes", description="Automatically find sinkholes using 1m DEMs from USGS")
-parser.add_argument('-i', '--input', action='store')
-parser.add_argument('-otif', '--output-geotiff')
-parser.add_argument('-ojson', '--output-geojson')
-parser.add_argument('-c', '--config')
-parser.add_argument('--area', action="store")
-args = parser.parse_args()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(prog="Find Sinkholes", description="Automatically find sinkholes using 1m DEMs from USGS")
+    parser.add_argument('-i', '--input', action='store')
+    parser.add_argument('-otif', '--output-geotiff', help='Filename to output .tif file that is hillshade with sinkholes highlighted. Or a folder, in which case the filename of the input file will be used for the output.')
+    parser.add_argument('-ojson', '--output-geojson', help='Filename to output .geojson file that is list of sinkholes. Or a folder, in which case the filename of the input file will be used for the output.')
+    parser.add_argument('-c', '--config')
+    parser.add_argument('--area', action="store")
+    args = parser.parse_args()
 
-if not ('input' in args and args.input != None) and args.area is None:
-    print('Must have --input (or -i) argument that specifies input .tif file with digital elevation model \
-or specify an area for which to download DEMs using --area')
-    exit(1)
-
-# parse config file
-config = default_config()
-if 'config' in args and args.config != None:
-    unit_conversion_constant = 1.0 # constant to multiply user-given numbers in config file by, to convert to meters
-    try:
-        with open(args.config, 'r') as config_file:
-            config_json = pyjson5.loads(config_file.read())
-            if 'units' in config_json:
-                units = config_json['units']
-                if units == 'metric':
-                    config['units'] = units
-                elif units == 'imperial':
-                    config['units'] = units
-                    unit_conversion_constant = meters_per_foot
-                else:
-                    print(f'Option units in config file "{units}" is invalid: must be "metric" or "imperial". Defaulting to {config["units"]}.')
-            if 'min_depth' in config_json:
-                min_depth = config_json['min_depth']
-                if type(min_depth) in (int, float) and min_depth >= 0:
-                    config['min_depth'] = min_depth * unit_conversion_constant
-                else:
-                    print(f'Option min_depth in config file "{str(min_depth)}" is invalid: must be nonnegative number. Defaulting to {config["min_depth"]}.')
-            if 'max_dimension' in config_json:
-                max_dimension = config_json['max_dimension']
-                if type(max_dimension) in (int, float) and max_dimension > 0:
-                    config['max_dimension'] = max_dimension * unit_conversion_constant
-                else:
-                    print(f'Option max_dimension in config file "{str(max_dimension)}" is invalid: must be positive number. Defaulting to {config["max_dimension"]}.')
-            if 'min_depth_for_colormap' in config_json:
-                min_depth_for_colormap = config_json['min_depth_for_colormap']
-                if type(min_depth_for_colormap) in (int, float) and min_depth_for_colormap > 0:
-                    config['min_depth_for_colormap'] = min_depth_for_colormap * unit_conversion_constant
-                else:
-                    print(f'Option min_depth_for_colormap in config file "{str(min_depth_for_colormap)}" is invalid: must be positive number. Defaulting to {config["min_depth_for_colormap"]}.')
-            if 'max_depth_for_colormap' in config_json:
-                max_depth_for_colormap = config_json['max_depth_for_colormap']
-                if type(max_depth_for_colormap) in (int, float) and max_depth_for_colormap > 0:
-                    config['max_depth_for_colormap'] = max_depth_for_colormap * unit_conversion_constant
-                else:
-                    print(f'Option max_depth_for_colormap in config file "{str(max_depth_for_colormap)}" is invalid: must be positive number. Defaulting to {config["max_depth_for_colormap"]}.')
-            if 'max_points_per_file' in config_json:
-                max_points_per_file = config_json['max_points_per_file']
-                if type(max_points_per_file) == int:
-                    config['max_points_per_file'] = max_points_per_file
-                else:
-                    print(f'Option max_points_per_file in config file "{str(max_points_per_file)}" is invalid: must be an integer. Defaulting to {config["max_points_per_file"]}.')
-            if 'pin_colormap' in config_json and type(config_json['pin_colormap']) is str:
-                config['pin_colormap'] = config_json['pin_colormap']
-            if 'map_colormap' in config_json and type(config_json['map_colormap']) is str:
-                config['map_colormap'] = config_json['map_colormap']
-            if 'hillshade_azimuth' in config_json:
-                hillshade_azimuth = config_json['hillshade_azimuth']
-                if type(hillshade_azimuth) in (int, float):
-                    config['hillshade_azimuth'] = hillshade_azimuth
-                else:
-                    print(f'Option hillshade_azimuth in config file "{str(hillshade_azimuth)}" is invalid: must be a number. Defaulting to {config["hillshade_azimuth"]}.')
-            if 'hillshade_altitude' in config_json:
-                hillshade_altitude = config_json['hillshade_altitude']
-                if type(hillshade_altitude) in (int, float):
-                    config['hillshade_altitude'] = hillshade_altitude
-                else:
-                    print(f'Option hillshade_altitude in config file "{str(hillshade_altitude)}" is invalid: must be a number. Defaulting to {config["hillshade_altitude"]}.')
-            if 'verbose' in config_json:
-                verbose = config_json['verbose']
-                if type(verbose) == bool:
-                    config['verbose'] = config_json['verbose']
-                else:
-                    print(f'Option verbose in config file "{str(verbose)}" is invalid: must be a boolean. Defaulting to {config["verbose"]}.')
-    except FileNotFoundError:
-        print(f'No config file "{args.config}" found. Using default values.')
-        config = default_config()
-    except Exception as err:
-        print(f'Error while readong config file "{args.config}". Using default config values. Exception stacktrace:')
-        print(traceback.format_exc())
-        config = default_config()
-
-
-if args.input is not None:
-    input_file = args.input
-if args.area is not None:
-    dems = download_dems(args.area)
-    if dems == []:
-        print('No DEMs were found for that search area')
+    if not ('input' in args and args.input != None) and args.area is None:
+        print('Must have --input (or -i) argument that specifies input .tif file with digital elevation model \
+    or specify an area for which to download DEMs using --area')
         exit(1)
-    input_file = dems[0]
 
-output_geotiff = 'output_geotiff' in args and args.output_geotiff != None
-output_geojson = 'output_geojson' in args and args.output_geojson != None
+    # parse config file
+    config = default_config()
+    if 'config' in args and args.config != None:
+        unit_conversion_constant = 1.0 # constant to multiply user-given numbers in config file by, to convert to meters
+        try:
+            with open(args.config, 'r') as config_file:
+                config_json = pyjson5.loads(config_file.read())
+                if 'units' in config_json:
+                    units = config_json['units']
+                    if units == 'metric':
+                        config['units'] = units
+                    elif units == 'imperial':
+                        config['units'] = units
+                        unit_conversion_constant = meters_per_foot
+                    else:
+                        print(f'Option units in config file "{units}" is invalid: must be "metric" or "imperial". Defaulting to {config["units"]}.')
+                if 'min_depth' in config_json:
+                    min_depth = config_json['min_depth']
+                    if type(min_depth) in (int, float) and min_depth >= 0:
+                        config['min_depth'] = min_depth * unit_conversion_constant
+                    else:
+                        print(f'Option min_depth in config file "{str(min_depth)}" is invalid: must be nonnegative number. Defaulting to {config["min_depth"]}.')
+                if 'max_dimension' in config_json:
+                    max_dimension = config_json['max_dimension']
+                    if type(max_dimension) in (int, float) and max_dimension > 0:
+                        config['max_dimension'] = max_dimension * unit_conversion_constant
+                    else:
+                        print(f'Option max_dimension in config file "{str(max_dimension)}" is invalid: must be positive number. Defaulting to {config["max_dimension"]}.')
+                if 'min_depth_for_colormap' in config_json:
+                    min_depth_for_colormap = config_json['min_depth_for_colormap']
+                    if type(min_depth_for_colormap) in (int, float) and min_depth_for_colormap > 0:
+                        config['min_depth_for_colormap'] = min_depth_for_colormap * unit_conversion_constant
+                    else:
+                        print(f'Option min_depth_for_colormap in config file "{str(min_depth_for_colormap)}" is invalid: must be positive number. Defaulting to {config["min_depth_for_colormap"]}.')
+                if 'max_depth_for_colormap' in config_json:
+                    max_depth_for_colormap = config_json['max_depth_for_colormap']
+                    if type(max_depth_for_colormap) in (int, float) and max_depth_for_colormap > 0:
+                        config['max_depth_for_colormap'] = max_depth_for_colormap * unit_conversion_constant
+                    else:
+                        print(f'Option max_depth_for_colormap in config file "{str(max_depth_for_colormap)}" is invalid: must be positive number. Defaulting to {config["max_depth_for_colormap"]}.')
+                if 'max_points_per_file' in config_json:
+                    max_points_per_file = config_json['max_points_per_file']
+                    if type(max_points_per_file) == int:
+                        config['max_points_per_file'] = max_points_per_file
+                    else:
+                        print(f'Option max_points_per_file in config file "{str(max_points_per_file)}" is invalid: must be an integer. Defaulting to {config["max_points_per_file"]}.')
+                if 'pin_colormap' in config_json and type(config_json['pin_colormap']) is str:
+                    config['pin_colormap'] = config_json['pin_colormap']
+                if 'map_colormap' in config_json and type(config_json['map_colormap']) is str:
+                    config['map_colormap'] = config_json['map_colormap']
+                if 'hillshade_azimuth' in config_json:
+                    hillshade_azimuth = config_json['hillshade_azimuth']
+                    if type(hillshade_azimuth) in (int, float):
+                        config['hillshade_azimuth'] = hillshade_azimuth
+                    else:
+                        print(f'Option hillshade_azimuth in config file "{str(hillshade_azimuth)}" is invalid: must be a number. Defaulting to {config["hillshade_azimuth"]}.')
+                if 'hillshade_altitude' in config_json:
+                    hillshade_altitude = config_json['hillshade_altitude']
+                    if type(hillshade_altitude) in (int, float):
+                        config['hillshade_altitude'] = hillshade_altitude
+                    else:
+                        print(f'Option hillshade_altitude in config file "{str(hillshade_altitude)}" is invalid: must be a number. Defaulting to {config["hillshade_altitude"]}.')
+                if 'verbose' in config_json:
+                    verbose = config_json['verbose']
+                    if type(verbose) == bool:
+                        config['verbose'] = config_json['verbose']
+                    else:
+                        print(f'Option verbose in config file "{str(verbose)}" is invalid: must be a boolean. Defaulting to {config["verbose"]}.')
+        except FileNotFoundError:
+            print(f'No config file "{args.config}" found. Using default values.')
+            config = default_config()
+        except Exception as err:
+            print(f'Error while readong config file "{args.config}". Using default config values. Exception stacktrace:')
+            print(traceback.format_exc())
+            config = default_config()
 
-output_geotiff_fname = ''
-output_geojson_fname = ''
-if output_geotiff:
-    output_geotiff_fname = args.output_geotiff
-if output_geojson:
-    output_geojson_fname = args.output_geojson
 
-if config['verbose']:
-    print('Using config object:')
-    print(json.dumps(config, indent=4))
+    if args.input is not None:
+        input_file = args.input
+    if args.area is not None:
+        dems = download_dems(args.area)
+        if dems == []:
+            print('No DEMs were found for that search area')
+            exit(1)
+        input_file = dems[0]
+    
+    input_file_fname_no_ext = os.path.splitext(os.path.basename(input_file))[0]
 
-process_geotiff(input_file, output_geotiff_fname, output_geojson_fname,
-                config=config,
-                output_geotiff=output_geotiff,
-                output_geojson=output_geojson)
+    output_geotiff = 'output_geotiff' in args and args.output_geotiff != None
+    output_geojson = 'output_geojson' in args and args.output_geojson != None
+
+    output_geotiff_fname = ''
+    output_geojson_fname = ''
+    if output_geotiff:
+        output_geotiff_fname = args.output_geotiff
+        if os.path.isdir(output_geotiff_fname):
+            possible_geotiff_fname = os.path.join(output_geotiff_fname, input_file_fname_no_ext + '.tif')
+            if os.path.exists(possible_geotiff_fname) and os.path.samefile(input_file, possible_geotiff_fname):
+                # avoid overwriting input file if user specifies same directory for input and output files
+                output_geotiff_fname = os.path.join(output_geotiff_fname, input_file_fname_no_ext + '_output.tif')
+            else:
+                output_geotiff_fname = possible_geotiff_fname
+
+    if output_geojson:
+        output_geojson_fname = args.output_geojson
+        if os.path.isdir(output_geojson_fname):
+            output_geojson_fname = os.path.join(output_geojson_fname, input_file_fname_no_ext + '.geojson')
+
+    if config['verbose']:
+        print('Using config object:')
+        print(json.dumps(config, indent=4))
+
+    process_geotiff(input_file, output_geotiff_fname, output_geojson_fname,
+                    config=config,
+                    output_geotiff=output_geotiff,
+                    output_geojson=output_geojson)
