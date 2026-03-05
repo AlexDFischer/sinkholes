@@ -24,8 +24,9 @@
     <p>This program takes in 1 meter digital elevation models (DEM's) made from LIDAR data that the US Geological Survey
         publishes, and processes the data to automatically detect sinkholes. It exports the sinkholes to a GeoJSON file
         that contains all the sinkholes as waypoints color-coded by depth, that can be imported into mapping
-        applications such as GaiaGPS, CalTopo, and Google Earth. It also exports a GeoTIFF map file that has a hillshade
-        map with the sinkholes highlighted and colorcoded by depth. This map file can be imported into CalTopo and
+        applications such as QGIS, QField, GaiaGPS, CalTopo, and Google Earth. It also exports a GeoTIFF map file that has a hillshade
+        map with the sinkholes highlighted and colorcoded by depth. This map file can be imported into programs like QGIS,
+        QField, ArcGIS, or
         Avenza to use as a map layer. Expect it to use about 2.8 GB of RAM to process a 10 km by 10 km USGS quad.</p>
 
     <p>This program detects sinkholes by looking for local minima in the landscape, where water cannot drain away. It
@@ -97,7 +98,7 @@
         The <span class="code">-otif</span> flag is the name of the file to which it saves the hillshade map with
         sinkholes highlighted. You can omit this flag if you don't want to export a hillshade map. The <span
             class="code">-ojson</span> flag is the name of the file to which it saves the list of sinkholes points that
-        can be imported into GaiaGPS, CalTopo, Google Earth, etc. You can omit this flag if you don't want to export a
+        can be imported into programs like QGIS, QField, GaiaGPS, CalTopo, Google Earth, etc. You can omit this flag if you don't want to export a
         list of sinkhole points.</p>
 
     <p>You can add a flag <span class="code">-c &lt;config-file-name.json&gt;</span> to include a config file that
@@ -110,7 +111,8 @@
 
     <img src="hillshadeExample.png" width="1010px" />
 
-    <p>This map file has GPS information built in and can be imported into CalTopo and Avenza to use as a map layer. The
+    <p>This map file has GPS information built in and can be imported into programs like QGIS, QField, ArcGIS, CalTopo
+        and Avenza to use as a map layer. The
         depth of the sinkhole is shown by the color. Light yellow is 0.5 m by default and black is 6 m deep by default.
         These default values can be changed in the config file; they are the keys <span
             class="code">min_depth_for_colormap</span> (default value 0.5 m) and <span
@@ -125,8 +127,15 @@
         likely to show up as "sinkholes". These many sinkholes in streambeds should usually be ignored in favor of the
         ones outside of streambeds, which are more likely to be actual karst sinkholes. However, sometimes cave
         entrances can be in streambeds, so don't necessarily write off all sinkholes found in streambeds!</p>
+    
+    <p>I strongly recommend viewing this data in <a href="https://qgis.org/">QGIS</a>. I have a
+        <a href="ridgewalking_template.zip">template QGIS project file</a> that I recommend for organizing your data.
+        You can make the LIDAR points (in the .geojson file) colorcoded by depth after you import them by right-clicking
+        the .geojson layer, going to Properties -> Symbology -> Simple Marker, then clicking the menu option to the
+        right of the color, then going to Field type: string -> marker-color.</p>
 
-    <p>The sinkholes are colorcoded by depth. The points in CalTopo have their color continuously vary from red (at the
+    <p>The sinkholes are colorcoded by depth. If you import them into QGIS and follow the procedure above, or import them
+        into CalTopo, the color continuously varies from red (at the
         default minimum depth of 0.5 m) to purple (at 6 m, and all deeper sinkholes have the same color) according to
         colors of the rainbow, using a log scale. GaiaGPS has a small set of allowed colors, and the depth maps to those
         colors using that same rainbow-log-scale:</p>
