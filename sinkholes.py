@@ -272,12 +272,15 @@ def default_config():
     }
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog="Find Sinkholes", description="Automatically find sinkholes using 1m DEMs from USGS")
+    parser = argparse.ArgumentParser(prog='Find Sinkholes', description='Automatically find sinkholes using 1m DEMs from USGS')
     parser.add_argument('-i', '--input', action='store')
-    parser.add_argument('-otif', '--output-geotiff', help='Filename to output .tif file that is hillshade with sinkholes highlighted. Or a folder, in which case the filename of the input file will be used for the output.')
-    parser.add_argument('-ojson', '--output-geojson', help='Filename to output .geojson file that is list of sinkholes. Or a folder, in which case the filename of the input file will be used for the output.')
-    parser.add_argument('-c', '--config')
-    parser.add_argument('--area', action="store")
+    parser.add_argument('-otif', '--output-geotiff', action='store', help='Filename to output .tif file that is hillshade with sinkholes highlighted. Or a folder, in which case the filename of the input file will be used for the output.')
+    parser.add_argument('-ojson', '--output-geojson', action='store', help='Filename to output .geojson file that is list of sinkholes. Or a folder, in which case the filename of the input file will be used for the output.')
+    parser.add_argument('-c', '--config', action='store')
+    parser.add_argument('-a', '--area', action='store')
+    parser.add_argument('-q', '--qgis', action='store', help='QGIS project file to add output layers to. If this file does not exist, it will be created from ridgewalking_template.qgs in template.')
+    parser.add_argument('--hillshade-group', action='store', default='hillshades', help='Name of group in QGIS project to put hillshade layer in (ignored if not using --qgis). Defaults to "hillshades".')
+    parser.add_argument('--sinkholes-group', action='store', default='sinkholes', help='Name of group in QGIS project to put sinkholes layer in (ignored if not using --qgis). Defaults to "sinkholes".')
     args = parser.parse_args()
 
     if not ('input' in args and args.input != None) and args.area is None:

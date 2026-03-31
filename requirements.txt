@@ -1,4 +1,5 @@
 earthpy
+lxml
 numpy
 opencv-python-headless
 pyjson5
