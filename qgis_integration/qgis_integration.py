@@ -1,6 +1,7 @@
 import lxml.etree as etree
 import os
 from pathlib import Path
+from rasterio.crs import CRS
 import tempfile
 import uuid
 import zipfile
@@ -125,6 +126,7 @@ def add_sinkholes_layer(qgis_project: etree.ElementTree,
 
 def add_hillshades_layer(qgis_project: etree.ElementTree,
                         tif_path: str,
+                        coordinate_reference_system: CRS,
                         layer_name: str | None=None,
                         group_name: str='hillshades') -> None:
     
@@ -196,6 +198,12 @@ def add_hillshades_layer(qgis_project: etree.ElementTree,
 
         layer_name_tag = hillshade_maplayer.find('.//layername')
         layer_name_tag.text = layer_name
+
+        # construct spatialrefsys tag
+        spatial_ref_sys = etree.Element('spatialrefsys', attrib={'nativeFormat': 'Wkt'})
+        etree.SubElement(spatial_ref_sys, 'wkt').text = coordinate_reference_system.to_wkt()
+        etree.SubElement(spatial_ref_sys, 'proj4').text = coordinate_reference_system.to_proj4()
+        etree.SubElement(spatial_ref_sys, 'srsid').text = '' # TODO I don't understand this and need to pick up here
 
         project_layers.append(hillshade_maplayer.getroot())
     else:
