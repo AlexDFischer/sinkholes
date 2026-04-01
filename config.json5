@@ -22,5 +22,7 @@
                                  // and ends at max_depth_for_colormap.
     "hillshade_azimuth": 315, // Sun azimuth angle for the hillshade map. See https://desktop.arcgis.com/en/arcmap/latest/tools/spatial-analyst-toolbox/how-hillshade-works.htm for explanation
     "hillshade_altitude": 20, // Sun altitude angle for the hillshade map. See https://desktop.arcgis.com/en/arcmap/latest/tools/spatial-analyst-toolbox/how-hillshade-works.htm for explanation
-    "verbose": true // Print extra information as the program runs.
+    "hillshades_group": "hillshades", // Name of group in QGIS project to put hillshade layer in (ignored if not using --qgis). Defaults to "hillshades".
+    "sinkholes_group": "sinkholes", // Name of group in QGIS project to put sinkholes layer in (ignored if not using --qgis). Defaults to "sinkholes".
+    "verbose": true, // Print extra information as the program runs.
 }
