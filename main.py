@@ -1,4 +1,5 @@
 import argparse
+import glob
 import os
 import json
 import numpy as np
@@ -101,9 +102,6 @@ class LidarProcessor:
             {
                 "type": "filters.range",
                 "limits": classification_str
-            },{
-                "type": "filters.reprojection",
-                "out_srs": "EPSG:26913"  # Transform to meters for the gridder
             },
             {
                 "type": "writers.gdal",
@@ -111,7 +109,6 @@ class LidarProcessor:
                 "output_type": "min",
                 "resolution": self.settings.resolution,
                 "nodata": self.settings.nodata_value,
-                "override_srs": "EPSG:4326", # Stays WGS84 in the file header
                 "data_type": "float32",
                 "gdaldriver": "GTiff"
             }
@@ -133,6 +130,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Do stuff with point clouds and DEMs.')
     parser.add_argument('-ll', '--bbox-lower-left', type=str, help='Lower-left corner of the bounding box, in the form latitude,longitude', required=False)
     parser.add_argument('-ur', '--bbox-upper-right', type=str, help='Upper-right corner of the bounding box, in the form latitude,longitude', required=False)
+    parser.add_argument('-pc', '--point-clouds', type=str, nargs='*', help='Path to a point cloud file to process into a DEM. Specify multiple point cloud files with globstars.', required=False)
     parser.add_argument('-s', '--settings', type=str, help='Path to a JSON configuration file with settings for the DEM generation process', required=False)
 
     args = parser.parse_args()
@@ -140,21 +138,28 @@ if __name__ == "__main__":
     settings = Settings.from_json(args.settings) if args.settings else Settings()
     lidar_processor = LidarProcessor(settings)
 
+    point_cloud_files = []
+
+    # Download point clouds using lower left and upper right coordinates if provided
     bbox_lower_left = [float(coord) for coord in args.bbox_lower_left.split(',')] if args.bbox_lower_left else None
     bbox_upper_right = [float(coord) for coord in args.bbox_upper_right.split(',')] if args.bbox_upper_right else None
 
-    if not bbox_lower_left or not bbox_upper_right:
-        print('No bounding box provided. Exiting.')
-        exit(0)
-
-    downloaded_point_cloud_files = lidar_processor.download_point_clouds(bbox_lower_left,
+    if args.bbox_lower_left is not None and args.bbox_upper_right is not None:
+        point_cloud_files = lidar_processor.download_point_clouds(bbox_lower_left,
                                                                        bbox_upper_right,
                                                                        usgs_response_output_fname='response.json')
-    num_point_clouds = len(downloaded_point_cloud_files)
-    print(f'Downloaded {num_point_clouds} point cloud files.')
+        print(f'Downloaded {len(point_cloud_files)} point cloud files.')
 
+    # Find point cloud files using glob if provided
+    if args.point_clouds is not None:
+        for file in args.point_clouds:
+            point_cloud_files.append(file)
+
+    num_point_clouds = len(point_cloud_files)
+
+    # Process point clouds into DEMs
     dem_fnames = []
-    for point_cloud_index, point_cloud_fname in enumerate(downloaded_point_cloud_files):
+    for point_cloud_index, point_cloud_fname in enumerate(point_cloud_files):
         dem_fname = os.path.join(settings.dems_dir, f'{point_cloud_fname.split('/')[-1].split('.')[0]}.tif')
         print(f'\r{ERASE_LINE_CODE}Processing point cloud {point_cloud_index + 1}/{num_point_clouds} into DEM at {dem_fname}', end='', flush=True)
         lidar_processor.make_dem(input_laz=point_cloud_fname,
