@@ -6,14 +6,13 @@
 #include <algorithm>
 #include "argparse.hpp"
 #include "dem.h"
-#include "Node.h"
+#include "Cell.h"
 #include "settings.h"
 #include "sinkhole.h"
 #include "utils.h"
 #include <time.h>
 #include <list>
 #include <unordered_map>
-
 
 using namespace std;
 using std::cout;
@@ -25,17 +24,22 @@ using std::ifstream;
 using std::priority_queue;
 using std::binary_function;
 
-typedef std::vector<Node> NodeVector;
-typedef std::priority_queue<Node, NodeVector, Node::Greater> PriorityQueue;
+typedef std::vector<Cell> NodeVector;
+typedef std::priority_queue<Cell, NodeVector, Cell::Greater> PriorityQueue;
+
+std::array<std::int8_t, 3> depth_to_color(float depth, Settings settings)
+{
+	return {0, 0, 0}; // TODO
+}
 
 void my_InitPriorityQue_onepass(CDEM& dem,
     BitArray2d& flag,
-    queue<Node>& traceQueue,
+    queue<Cell>& traceQueue,
     PriorityQueue& priorityQueue)
 {
 	int width=dem.Get_NX();
 	int height=dem.Get_NY();
-	Node tmpNode;
+	Cell tmpNode;
 	int iRow, iCol;
 	// push border cells into the PQ
     for (int row = 0; row < height; row++)
@@ -44,7 +48,7 @@ void my_InitPriorityQue_onepass(CDEM& dem,
         {
             tmpNode.row = row;
             tmpNode.col = col;
-            tmpNode.spill = dem.asFloat(row, col);
+            tmpNode.spill_elevation = dem.asFloat(row, col);
             priorityQueue.push(tmpNode);
             flag.set_true(row, col);
         }
@@ -56,35 +60,24 @@ void my_InitPriorityQue_onepass(CDEM& dem,
         {
             tmpNode.row = row;
             tmpNode.col = col;
-            tmpNode.spill = dem.asFloat(row, col);
+            tmpNode.spill_elevation = dem.asFloat(row, col);
             priorityQueue.push(tmpNode);
             flag.set_true(row, col);
         }
     }
 }
 
-void update_sinkhole(Sinkhole& sinkhole, CDEM& dem, int row, int col, int spill_elevation)
-{
-    sinkhole.area += 1;
-    sinkhole.min_x = min(sinkhole.min_x, col);
-    sinkhole.max_x = max(sinkhole.max_x, col);
-    sinkhole.min_y = min(sinkhole.min_y, row);
-    sinkhole.max_y = max(sinkhole.max_y, row);
-    sinkhole.max_depth = max(sinkhole.max_depth,
-        dem.is_NoData(row, col) ? 0.0f : spill_elevation - dem.asFloat(row, col));
-}
-
 void my_ProcessPit_onepass(CDEM& dem,
     BitArray2d& flag,
-    queue<Node>& depressionQueue,
-    queue<Node>& traceQueue,
+    queue<Cell>& depressionQueue,
+    queue<Cell>& traceQueue,
     PriorityQueue& priorityQueue,
     Sinkhole& sinkhole)
 {
 	int neighbor_row, neighbor_col,i;
 	float neighbor_elevation;
-	Node neighbor_node;
-	Node current_node;
+	Cell neighbor_node;
+	Cell current_node;
 	int width=dem.Get_NX();
 	int height=dem.Get_NY();
 	while (!depressionQueue.empty())
@@ -103,12 +96,12 @@ void my_ProcessPit_onepass(CDEM& dem,
             }
 
 			neighbor_elevation = dem.asFloat(neighbor_row, neighbor_col);
-			if (neighbor_elevation > current_node.spill) 
+			if (neighbor_elevation > current_node.spill_elevation) 
 			{
                 // slope cell
 				neighbor_node.row = neighbor_row;
 				neighbor_node.col = neighbor_col;
-				neighbor_node.spill = neighbor_elevation;				
+				neighbor_node.spill_elevation = neighbor_elevation;				
 				flag.set_true(neighbor_row,neighbor_col);
 				traceQueue.push(neighbor_node);
 			}
@@ -116,13 +109,16 @@ void my_ProcessPit_onepass(CDEM& dem,
             {
                 // depression cell
                 flag.set_true(neighbor_row,neighbor_col);
-                dem.set_value(neighbor_row, neighbor_col, current_node.spill);
+				if (!dem.is_NoData(neighbor_row, neighbor_col))
+				{
+                	dem.set_value(neighbor_row, neighbor_col, current_node.spill_elevation);
+				}
                 neighbor_node.row = neighbor_row;
                 neighbor_node.col = neighbor_col;
-                neighbor_node.spill = current_node.spill;
+                neighbor_node.spill_elevation = current_node.spill_elevation;
                 depressionQueue.push(neighbor_node);
 
-                update_sinkhole(sinkhole, dem, neighbor_row, neighbor_col, current_node.spill);
+                sinkhole.update(dem, neighbor_row, neighbor_col, current_node.spill_elevation);
             }
 		}
 	}
@@ -130,12 +126,12 @@ void my_ProcessPit_onepass(CDEM& dem,
 
 void my_ProcessTraceQue_onepass(CDEM& dem,
     BitArray2d& flag,
-    queue<Node>& traceQueue,
+    queue<Cell>& traceQueue,
     PriorityQueue& priorityQueue)
 {
 	int iRow, iCol,i;
 	float iSpill;
-	Node N,node,headNode;
+	Cell N,node,headNode;
 	int width=dem.Get_NX();
 	int height=dem.Get_NY();	
 	int total=0,nPSC=0;
@@ -156,7 +152,7 @@ void my_ProcessTraceQue_onepass(CDEM& dem,
 			
 			iSpill = dem.asFloat(iRow, iCol);
 			
-			if (iSpill <= node.spill) 	{
+			if (iSpill <= node.spill_elevation) 	{
 				if (!bInPQ) {
 					//decide  whether (iRow, iCol) is a true border cell
 					isBoundary=true;
@@ -182,20 +178,19 @@ void my_ProcessTraceQue_onepass(CDEM& dem,
 			//N is unprocessed and N is higher than C
 			N.col = iCol;
 			N.row = iRow;
-			N.spill = iSpill;
+			N.spill_elevation = iSpill;
 			traceQueue.push(N);
 			flag.set_true(iRow,iCol);		
 		}
 	}
 }
 
-void filled_difference_direct(CDEM& dem)
+void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes)
 {
     // more or less directly copy FillDEM_Zhou_OnePass
 
-    vector<Sinkhole> sinkholes;
-	queue<Node> traceQueue;
-	queue<Node> depressionQueue;
+    queue<Cell> traceQueue;
+	queue<Cell> depressionQueue;
     
     int width = dem.Get_NX();
 	int height = dem.Get_NY();
@@ -209,16 +204,16 @@ void filled_difference_direct(CDEM& dem)
 	PriorityQueue priorityQueue;
 	int percentFive;
 	int neighbor_row, neighbor_col, row,col;
-	float neighbor_elevation,spill;
+	float neighbor_elevation,spill_elevation;
 
 	my_InitPriorityQue_onepass(dem,visited,traceQueue,priorityQueue);
 	while (!priorityQueue.empty())
 	{
-		Node tmpNode = priorityQueue.top();
+		Cell cell = priorityQueue.top();
 		priorityQueue.pop();
-		row = tmpNode.row;
-		col = tmpNode.col;
-		spill = tmpNode.spill;
+		row = cell.row;
+		col = cell.col;
+		spill_elevation = cell.spill_elevation;
 
 		for (int i = 0; i < 8; i++)
 		{
@@ -228,27 +223,30 @@ void filled_difference_direct(CDEM& dem)
 
 			if (visited.is_visited(neighbor_row,neighbor_col)) continue;
 			neighbor_elevation = dem.asFloat(neighbor_row, neighbor_col);
-			if (neighbor_elevation <= spill)
+			if (neighbor_elevation <= spill_elevation)
 			{
 				//depression cell
-				dem.set_value(neighbor_row, neighbor_col, spill);
+				if (!dem.is_NoData(neighbor_row, neighbor_col))
+				{
+					dem.set_value(neighbor_row, neighbor_col, spill_elevation);
+				}
 				visited.set_true(neighbor_row,neighbor_col);
-				tmpNode.row = neighbor_row;
-				tmpNode.col = neighbor_col;
-				tmpNode.spill = spill;
-				depressionQueue.push(tmpNode);
+				cell.row = neighbor_row;
+				cell.col = neighbor_col;
+				cell.spill_elevation = spill_elevation;
+				depressionQueue.push(cell);
                 Sinkhole& sinkhole = sinkholes.emplace_back();
-                update_sinkhole(sinkhole, dem, neighbor_row, neighbor_col, spill);
+                sinkhole.update(dem, neighbor_row, neighbor_col, spill_elevation);
 				my_ProcessPit_onepass(dem, visited, depressionQueue, traceQueue, priorityQueue, sinkhole);
 			}
 			else
 			{
 				//slope cell
 				visited.set_true(neighbor_row,neighbor_col);
-				tmpNode.row = neighbor_row;
-				tmpNode.col = neighbor_col;
-				tmpNode.spill = neighbor_elevation;
-				traceQueue.push(tmpNode);
+				cell.row = neighbor_row;
+				cell.col = neighbor_col;
+				cell.spill_elevation = neighbor_elevation;
+				traceQueue.push(cell);
 			}			
 			my_ProcessTraceQue_onepass(dem,visited,traceQueue,priorityQueue);
 		}
@@ -297,7 +295,20 @@ int main(int argc, char** argv)
         std::exit(1);
     }
 
-    filled_difference_direct(dem);
+	// Now we actually start processing the DEM
+
+	// make the hillshade
+	// TODO
+
+	// fill DEM and find sinkholes
+	std::vector<Sinkhole> sinkholes;
+    fill_dem(dem, sinkholes);
+
+	// write modified hillshade
+	// TOOD
+
+	// write sinkholes
+	// TOOD
 
 	double min, max, mean, stdDev;
 	calculateStatistics(dem, &min, &max, &mean, &stdDev);

@@ -12,7 +12,8 @@ class Sinkhole
     int min_y;
     int max_y;
     float max_depth;
-
+    int x;
+    int y;
 
 
     Sinkhole()
@@ -21,10 +22,13 @@ class Sinkhole
     max_x(std::numeric_limits<int>::min()),
     min_y(std::numeric_limits<int>::max()),
     max_y(std::numeric_limits<int>::min()),
-    max_depth(0.0f)
+    max_depth(0.0f),
+    x(0),
+    y(0)
     {
     }
 
+    void update(CDEM& dem, int row, int col, int spill_elevation);
     std::string info_string(float x_unit, float y_unit);
 };
 

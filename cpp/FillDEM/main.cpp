@@ -22,8 +22,8 @@ using std::priority_queue;
 using std::binary_function;
 
 
-typedef std::vector<Node> NodeVector;
-typedef std::priority_queue<Node, NodeVector, Node::Greater> PriorityQueue;
+typedef std::vector<Cell> NodeVector;
+typedef std::priority_queue<Cell, NodeVector, Cell::Greater> PriorityQueue;
 
 void FillDEM_Zhou_TwoPass(char* inputFile, char* outputFilledPath);
 void FillDEM_Zhou_OnePass(char* inputFile, char* outputFilledPath);
@@ -63,7 +63,7 @@ int FillDEM_Wang(char* inputFile, char* outputFilledPath)
 	{
 		for (int col = 0; col < width; col++)
 		{
-			Node tmpNode;
+			Cell tmpNode;
 			if (!dem.is_NoData(row, col))
 			{
 				validElementsCount++;
@@ -76,7 +76,7 @@ int FillDEM_Wang(char* inputFile, char* outputFilledPath)
 					{
 						tmpNode.col = col;
 						tmpNode.row = row;
-						tmpNode.spill = dem.asFloat(row, col);
+						tmpNode.spill_elevation = dem.asFloat(row, col);
 						queue.push(tmpNode);
 						flag.set_true(row,col);
 						break;
@@ -102,12 +102,12 @@ int FillDEM_Wang(char* inputFile, char* outputFilledPath)
 			int percentNum = count / percentFive;
 			cout<<"Progress:"<<percentNum * 5 <<"%\r";
 		}
-		Node tmpNode = queue.top();
+		Cell tmpNode = queue.top();
 		queue.pop();
 
 		int row = tmpNode.row;
 		int col = tmpNode.col;
-		float spill = tmpNode.spill;
+		float spill = tmpNode.spill_elevation;
 
 
 		for (int i = 0; i < 8; i++)
@@ -126,7 +126,7 @@ int FillDEM_Wang(char* inputFile, char* outputFilledPath)
 				flag.set_true(iRow,iCol);						
 				tmpNode.row = iRow;
 				tmpNode.col = iCol;
-				tmpNode.spill = iSpill;
+				tmpNode.spill_elevation = iSpill;
 				queue.push(tmpNode);
 			}
 
@@ -174,14 +174,14 @@ int FillDEM_Barnes(char* inputFile, char* outputFilledPath)
 	timeStart = time(NULL);
 	
 	PriorityQueue queue;
-	std::queue<Node> pitque;
+	std::queue<Cell> pitque;
 	int validElementsCount = 0;
 	// push border cells into the PQ
 	for (int row = 0; row < height; row++)
 	{
 		for (int col = 0; col < width; col++)
 		{
-			Node tmpNode;
+			Cell tmpNode;
 			if (!dem.is_NoData(row, col))
 			{
 				validElementsCount++;
@@ -194,7 +194,7 @@ int FillDEM_Barnes(char* inputFile, char* outputFilledPath)
 					{
 						tmpNode.col = col;
 						tmpNode.row = row;
-						tmpNode.spill = dem.asFloat(row, col);
+						tmpNode.spill_elevation = dem.asFloat(row, col);
 						queue.push(tmpNode);
 						flag.set_true(row,col);
 						break;
@@ -209,7 +209,7 @@ int FillDEM_Barnes(char* inputFile, char* outputFilledPath)
 	int percentFive = validElementsCount / 20;
 
 	int count = 0;
-	Node tmpNode;
+	Cell tmpNode;
 	int iRow, iCol;
 	float iSpill;
 	int i;
@@ -232,7 +232,7 @@ int FillDEM_Barnes(char* inputFile, char* outputFilledPath)
 		}
 		int row = tmpNode.row;
 		int col = tmpNode.col;
-		float spill = tmpNode.spill;
+		float spill = tmpNode.spill_elevation;
 
 
 		for (i = 0; i < 8; i++)
@@ -248,7 +248,7 @@ int FillDEM_Barnes(char* inputFile, char* outputFilledPath)
 
 					tmpNode.row = iRow;
 					tmpNode.col = iCol;
-					tmpNode.spill = spill;
+					tmpNode.spill_elevation = spill;
 					pitque.push(tmpNode);
 				}
 				else
@@ -257,7 +257,7 @@ int FillDEM_Barnes(char* inputFile, char* outputFilledPath)
 					flag.set_true(iRow,iCol);
 					tmpNode.row = iRow;
 					tmpNode.col = iCol;
-					tmpNode.spill = iSpill;
+					tmpNode.spill_elevation = iSpill;
 					queue.push(tmpNode);
 				}
 

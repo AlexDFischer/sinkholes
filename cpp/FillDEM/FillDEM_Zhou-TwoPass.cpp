@@ -11,14 +11,14 @@
 #include <unordered_map>
 using namespace std;
 
-typedef std::vector<Node> NodeVector;
-typedef std::priority_queue<Node, NodeVector, Node::Greater> PriorityQueue;
-void InitPriorityQue(CDEM& dem, BitArray2d& flag, BitArray2d& flag2, queue<Node>& traceQueue, PriorityQueue& priorityQueue,int& percentFive)
+typedef std::vector<Cell> NodeVector;
+typedef std::priority_queue<Cell, NodeVector, Cell::Greater> PriorityQueue;
+void InitPriorityQue(CDEM& dem, BitArray2d& flag, BitArray2d& flag2, queue<Cell>& traceQueue, PriorityQueue& priorityQueue,int& percentFive)
 {
 	int width=dem.Get_NX();
 	int height=dem.Get_NY();
 	int validElementsCount = 0;
-	Node tmpNode;
+	Cell tmpNode;
 	int iRow, iCol;
     // push border cells into the PQ
 	for (int row = 0; row < height; row++)
@@ -37,7 +37,7 @@ void InitPriorityQue(CDEM& dem, BitArray2d& flag, BitArray2d& flag2, queue<Node>
 					{
 						tmpNode.col = col;
 						tmpNode.row = row;
-						tmpNode.spill = dem.asFloat(row, col);
+						tmpNode.spill_elevation = dem.asFloat(row, col);
 						priorityQueue.push(tmpNode);
 
 						flag.SetFlags(row,col,flag2);
@@ -53,14 +53,14 @@ void InitPriorityQue(CDEM& dem, BitArray2d& flag, BitArray2d& flag2, queue<Node>
 
 	percentFive = validElementsCount / 20;
 }
-void ProcessTraceQue(CDEM& dem,BitArray2d& flag, BitArray2d& flag2,queue<Node>& traceQueue, PriorityQueue& priorityQueue,int& count, int percentFive)
+void ProcessTraceQue(CDEM& dem,BitArray2d& flag, BitArray2d& flag2,queue<Cell>& traceQueue, PriorityQueue& priorityQueue,int& count, int percentFive)
 {
 	int iRow, iCol,i;
 	float iSpill;
-	Node N,node,headNode;
+	Cell N,node,headNode;
 	int width=dem.Get_NX();
 	int height=dem.Get_NY();	
-	queue<Node> traceQueue2(traceQueue);
+	queue<Cell> traceQueue2(traceQueue);
 	int total=0;
 	while (!traceQueue.empty())
 	{
@@ -80,13 +80,13 @@ void ProcessTraceQue(CDEM& dem,BitArray2d& flag, BitArray2d& flag2,queue<Node>& 
 			
 			iSpill = dem.asFloat(iRow, iCol);
 			
-			if (iSpill <= node.spill) 
+			if (iSpill <= node.spill_elevation) 
 				continue;  
 
 			//slope cell
 			N.col = iCol;
 			N.row = iRow;
-			N.spill = iSpill;
+			N.spill_elevation = iSpill;
 			traceQueue.push(N);
 			flag.set_true(iRow,iCol);		
 		}
@@ -121,7 +121,7 @@ void ProcessTraceQue(CDEM& dem,BitArray2d& flag, BitArray2d& flag2,queue<Node>& 
 			}
 			else {
 				if (!bInPQ) {
-					node.spill=dem.asFloat(node.row, node.col);
+					node.spill_elevation=dem.asFloat(node.row, node.col);
 					priorityQueue.push(node);				
 					bInPQ=true;
 					nPSC++;
@@ -132,12 +132,12 @@ void ProcessTraceQue(CDEM& dem,BitArray2d& flag, BitArray2d& flag2,queue<Node>& 
 	count=count0+total-nPSC;
 }
 
-void ProcessPit(CDEM& dem, BitArray2d& flag, BitArray2d& flag2,queue<Node>& depressionQue,queue<Node>& traceQueue,PriorityQueue& priorityQueue,int& count, int percentFive)
+void ProcessPit(CDEM& dem, BitArray2d& flag, BitArray2d& flag2,queue<Cell>& depressionQue,queue<Cell>& traceQueue,PriorityQueue& priorityQueue,int& count, int percentFive)
 {
 	int iRow, iCol,i;
 	float iSpill;
-	Node N;
-	Node node;
+	Cell N;
+	Cell node;
 	int width=dem.Get_NX();
 	int height=dem.Get_NY();
 	while (!depressionQue.empty())
@@ -156,11 +156,11 @@ void ProcessPit(CDEM& dem, BitArray2d& flag, BitArray2d& flag2,queue<Node>& depr
 
 			if (flag.is_visited_skip_boundary_check(iRow,iCol)) continue;		
 			iSpill = dem.asFloat(iRow, iCol);
-			if (iSpill > node.spill) 
+			if (iSpill > node.spill_elevation) 
 			{   //slope cell
 				N.row = iRow;
 				N.col = iCol;
-				N.spill = iSpill;
+				N.spill_elevation = iSpill;
 				traceQueue.push(N);
 				flag.set_true(iRow,iCol);
 				flag2.set_true(iRow,iCol);
@@ -169,10 +169,10 @@ void ProcessPit(CDEM& dem, BitArray2d& flag, BitArray2d& flag2,queue<Node>& depr
 
 			//depressio cell
 			flag.SetFlags(iRow,iCol,flag2);
-			dem.set_value(iRow, iCol, node.spill);
+			dem.set_value(iRow, iCol, node.spill_elevation);
 			N.row = iRow;
 			N.col = iCol;
-			N.spill = node.spill;
+			N.spill_elevation = node.spill_elevation;
 			depressionQue.push(N);
 		}
 	}
@@ -180,8 +180,8 @@ void ProcessPit(CDEM& dem, BitArray2d& flag, BitArray2d& flag2,queue<Node>& depr
 
 void FillDEM_Zhou_TwoPass(char* inputFile, char* outputFilledPath)
 {
-	queue<Node> traceQueue;//׷�ٶ���
-	queue<Node> depressionQue;//�ݵص��б�
+	queue<Cell> traceQueue;//׷�ٶ���
+	queue<Cell> depressionQue;//�ݵص��б�
 
 	//��������
 	CDEM dem;
@@ -224,7 +224,7 @@ void FillDEM_Zhou_TwoPass(char* inputFile, char* outputFilledPath)
 	InitPriorityQue(dem,flag,flag2,traceQueue,priorityQueue,percentFive);
 	while (!priorityQueue.empty())
 	{
-		Node tmpNode = priorityQueue.top();
+		Cell tmpNode = priorityQueue.top();
 		priorityQueue.pop();
 		count++;
 		if (count % percentFive == 0)
@@ -233,7 +233,7 @@ void FillDEM_Zhou_TwoPass(char* inputFile, char* outputFilledPath)
 		}
 		row = tmpNode.row;
 		col = tmpNode.col;
-		spill = tmpNode.spill;
+		spill = tmpNode.spill_elevation;
 		for (int i = 0; i < 8; i++)
 		{
 
@@ -250,7 +250,7 @@ void FillDEM_Zhou_TwoPass(char* inputFile, char* outputFilledPath)
 				flag.SetFlags(iRow,iCol,flag2);
 				tmpNode.row = iRow;
 				tmpNode.col = iCol;
-				tmpNode.spill = spill;
+				tmpNode.spill_elevation = spill;
 				depressionQue.push(tmpNode);
 				ProcessPit(dem,flag,flag2,depressionQue,traceQueue,priorityQueue,count,percentFive);
 			}
@@ -260,7 +260,7 @@ void FillDEM_Zhou_TwoPass(char* inputFile, char* outputFilledPath)
 				flag.SetFlags(iRow,iCol,flag2);
 				tmpNode.row = iRow;
 				tmpNode.col = iCol;
-				tmpNode.spill = iSpill;
+				tmpNode.spill_elevation = iSpill;
 				traceQueue.push(tmpNode);
 			}			
 			ProcessTraceQue(dem,flag,flag2,traceQueue,priorityQueue,count,percentFive);
