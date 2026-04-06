@@ -2,3 +2,6 @@
 point_clouds
 dems
 __pycache__/
+**/*.o
+cpp/FillDEM/bin
+**/*.aux.xml
