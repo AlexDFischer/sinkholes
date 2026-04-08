@@ -1,4 +1,11 @@
+#ifndef SETTINGS_H  
+#define SETTINGS_H  
+
 #include <string>
+
+#include "colors.h"
+
+using namespace std;
 
 class Settings
 {
@@ -9,12 +16,12 @@ class Settings
     static constexpr float DEFAULT_MIN_SINKHOLE_AREA = 0.0;
     static constexpr float DEFAULT_MIN_DEPTH_FOR_COLORMAP = 0.5;
     static constexpr float DEFAULT_MAX_DEPTH_FOR_COLORMAP = 6.0;
-    static const std::string DEFAULT_POINT_COLORMAP;
-    static const std::string DEFAULT_HILLSHADE_COLORMAP;
+    static const string DEFAULT_COLORMAP;
     static constexpr float DEFAULT_HILLSHADE_Z_FACTOR = 1.0;
     static constexpr float DEFAULT_HILLSHADE_AZIMUTH = 315.0;
     static constexpr float DEFAULT_HILLSHADE_ALTITUDE = 45.0;
     static constexpr bool DEFAULT_VERBOSE = true;
+
 
     public:
     const float RESOLUTION_X;
@@ -23,8 +30,7 @@ class Settings
     const float MIN_SINKHOLE_AREA;
     const float MIN_DEPTH_FOR_COLORMAP;
     const float MAX_DEPTH_FOR_COLORMAP;
-    const std::string POINT_COLORMAP;
-    const std::string HILLSHADE_COLORMAP;
+    const Colormap& COLORMAP;
     const float HILLSHADE_Z_FACTOR;
     const float HILLSHADE_AZIMUTH;
     const float HILLSHADE_ALTITUDE;
@@ -37,8 +43,7 @@ class Settings
         float min_sinkhole_area = DEFAULT_MIN_SINKHOLE_AREA,
         float min_depth_for_colormap = DEFAULT_MIN_DEPTH_FOR_COLORMAP,
         float max_depth_for_colormap = DEFAULT_MAX_DEPTH_FOR_COLORMAP,
-        const std::string& point_colormap_name = DEFAULT_POINT_COLORMAP,
-        const std::string& hillshade_colormap_name = DEFAULT_HILLSHADE_COLORMAP,
+        const string colormap = DEFAULT_COLORMAP,
         float hillshade_z_factor = DEFAULT_HILLSHADE_Z_FACTOR,
         float hillshade_azimuth = DEFAULT_HILLSHADE_AZIMUTH,
         float hillshade_altitude = DEFAULT_HILLSHADE_ALTITUDE,
@@ -50,8 +55,7 @@ class Settings
         MIN_SINKHOLE_AREA(min_sinkhole_area),
         MIN_DEPTH_FOR_COLORMAP(min_depth_for_colormap),
         MAX_DEPTH_FOR_COLORMAP(max_depth_for_colormap),
-        POINT_COLORMAP(point_colormap_name),
-        HILLSHADE_COLORMAP(hillshade_colormap_name),
+        COLORMAP(rainbow_4_reverse_colormap), // TODO function that initializes here from string
         HILLSHADE_Z_FACTOR(hillshade_z_factor),
         HILLSHADE_AZIMUTH(hillshade_azimuth),
         HILLSHADE_ALTITUDE(hillshade_altitude),
@@ -59,4 +63,10 @@ class Settings
     {
 
     }
+
+    Color depth_to_color(float depth);
+
+    string depth_to_gaiagps_color(float depth);
 };
+
+#endif

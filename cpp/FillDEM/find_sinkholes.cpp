@@ -27,7 +27,7 @@ using std::binary_function;
 typedef std::vector<Cell> NodeVector;
 typedef std::priority_queue<Cell, NodeVector, Cell::Greater> PriorityQueue;
 
-std::array<std::int8_t, 3> depth_to_color(float depth, Settings settings)
+Color depth_to_hillshade_color(float depth, Settings settings)
 {
 	return {0, 0, 0}; // TODO
 }

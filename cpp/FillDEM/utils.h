@@ -6,6 +6,8 @@
 #include <algorithm>
 #include "dem.h"
 
+typedef array<std::uint8_t, 3> Color;
+
 void calculateStatistics(const CDEM& dem, double* min, double* max, double* mean, double* stdDev);
 
 extern int	irow[8];

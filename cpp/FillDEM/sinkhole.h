@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "utils.h"
+
 class Sinkhole
 {
     public:
@@ -30,6 +32,8 @@ class Sinkhole
 
     void update(CDEM& dem, int row, int col, int spill_elevation);
     std::string info_string(float x_unit, float y_unit);
+
+    Color get_color(Settings& settings);
 };
 
 #endif

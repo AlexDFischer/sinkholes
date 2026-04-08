@@ -20,10 +20,10 @@ bin/bug.o: dem.h Cell.h utils.h bug.cpp
 bin/find_sinkholes.o: dem.h Cell.h utils.h settings.h argparse.hpp settings.h sinkhole.h find_sinkholes.cpp
 	g++ -c find_sinkholes.cpp $(CXXFLAGS) -o bin/find_sinkholes.o
 
-bin/sinkhole.o: sinkhole.h sinkhole.cpp
+bin/sinkhole.o: utils.h settings.h sinkhole.h sinkhole.cpp
 	g++ -c sinkhole.cpp $(CXXFLAGS) -o bin/sinkhole.o
 
-bin/settings.o: settings.h settings.cpp
+bin/settings.o: utils.h settings.h settings.cpp
 	g++ -c settings.cpp $(CXXFLAGS) -o bin/settings.o
 
 bin/dem.o: dem.h utils.h dem.cpp

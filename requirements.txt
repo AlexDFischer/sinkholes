@@ -1,2 +1,3 @@
 pdal
 requests
+colorcet

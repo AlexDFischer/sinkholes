@@ -2,6 +2,7 @@
 #include <string>
 
 #include "dem.h"
+#include "settings.h"
 #include "sinkhole.h"
 
 std::string Sinkhole::info_string(float x_unit, float y_unit)
@@ -29,4 +30,14 @@ void Sinkhole::update(CDEM& dem, int row, int col, int spill_elevation)
         this->x = col;
         this->y = row;
     }
+}
+
+Color Sinkhole::get_color(Settings& settings)
+{
+    
+}
+
+std::string get_gaiagps_color(Settings& settings)
+{
+
 }
