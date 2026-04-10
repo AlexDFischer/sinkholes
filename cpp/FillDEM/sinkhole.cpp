@@ -32,12 +32,32 @@ void Sinkhole::update(CDEM& dem, int row, int col, int spill_elevation)
     }
 }
 
-Color Sinkhole::get_color(Settings& settings)
+std::string Sinkhole::to_wgs84(const double* geo_transform, const std::string& wkt)
 {
-    
-}
+    // Convert pixel (col, row) to projected coordinates using the geotransform
+    double proj_x = geo_transform[0] + x * geo_transform[1] + y * geo_transform[2];
+    double proj_y = geo_transform[3] + x * geo_transform[4] + y * geo_transform[5];
 
-std::string get_gaiagps_color(Settings& settings)
-{
+    // Set up source CRS from the DEM's WKT
+    OGRSpatialReference src_crs;
+    src_crs.importFromWkt(wkt.c_str());
 
+    // Set up target CRS (WGS84 geographic)
+    OGRSpatialReference dst_crs;
+    dst_crs.SetWellKnownGeogCS("WGS84");
+
+    // Ensure axis order is (longitude, latitude) regardless of CRS definition
+    dst_crs.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+
+    OGRCoordinateTransformation* transform = OGRCreateCoordinateTransformation(&src_crs, &dst_crs);
+    if (transform == nullptr)
+    {
+        return "";
+    }
+
+    double lon = proj_x, lat = proj_y;
+    transform->Transform(1, &lon, &lat);
+    OGRCoordinateTransformation::DestroyCT(transform);
+
+    return std::to_string(lat) + ", " + std::to_string(lon);
 }

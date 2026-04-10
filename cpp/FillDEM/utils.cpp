@@ -93,7 +93,7 @@ bool CreateGeoTIFF(const char* path,
 	return true;
 }
 //read a DEM GeoTIFF file 
-bool readTIFF(const char* path, GDALDataType type, CDEM& dem, double* geoTransformArray6Eles)
+bool readTIFF(const char* path, GDALDataType type, CDEM& dem, double* geoTransformArray6Eles, std::string* wkt_out)
 {
 	GDALDataset *poDataset;   
     GDALAllRegister();
@@ -120,6 +120,10 @@ bool readTIFF(const char* path, GDALDataType type, CDEM& dem, double* geoTransfo
 
 	memset(geoTransformArray6Eles, 0, 6);
 	poDataset->GetGeoTransform(geoTransformArray6Eles);
+	if (wkt_out != nullptr)
+	{
+		*wkt_out = poDataset->GetProjectionRef();
+	}
 
 	dem.SetWidth(poBand->GetXSize());
 	dem.SetHeight(poBand->GetYSize());

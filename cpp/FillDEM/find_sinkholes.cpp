@@ -27,11 +27,6 @@ using std::binary_function;
 typedef std::vector<Cell> NodeVector;
 typedef std::priority_queue<Cell, NodeVector, Cell::Greater> PriorityQueue;
 
-Color depth_to_hillshade_color(float depth, Settings settings)
-{
-	return {0, 0, 0}; // TODO
-}
-
 void my_InitPriorityQue_onepass(CDEM& dem,
     BitArray2d& flag,
     queue<Cell>& traceQueue,
@@ -185,7 +180,7 @@ void my_ProcessTraceQue_onepass(CDEM& dem,
 	}
 }
 
-void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes)
+void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes, Settings& settings)
 {
     // more or less directly copy FillDEM_Zhou_OnePass
 
@@ -235,9 +230,13 @@ void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes)
 				cell.col = neighbor_col;
 				cell.spill_elevation = spill_elevation;
 				depressionQueue.push(cell);
-                Sinkhole& sinkhole = sinkholes.emplace_back();
+                Sinkhole sinkhole = Sinkhole();
                 sinkhole.update(dem, neighbor_row, neighbor_col, spill_elevation);
 				my_ProcessPit_onepass(dem, visited, depressionQueue, traceQueue, priorityQueue, sinkhole);
+				if (sinkhole.max_depth >= settings.MIN_SINKHOLE_DEPTH && sinkhole.area >= settings.MIN_SINKHOLE_AREA)
+				{
+					sinkholes.push_back(sinkhole);
+				}
 			}
 			else
 			{
@@ -252,6 +251,45 @@ void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes)
 		}
 	}
     std::cout << "Finished filling DEM" << std::endl;
+}
+
+void handle_dem(string input_fname, optional<string> output_hillshade_fname, optional<string> output_sinkholes_fname, Settings& settings)
+{
+	CDEM dem;
+    double geoTransofrmArgs[6];
+    std::string wkt;
+    bool read_result = readTIFF(input_fname.c_str(),
+        GDALDataType::GDT_Float32, dem, geoTransofrmArgs, &wkt);
+    if (!read_result)
+    {
+        std::cerr << "Error occurred while reading GeoTIFF file " << input_fname << ". Exiting." << endl;
+        std::exit(1);
+    }
+
+	// Now we actually start processing the DEM
+
+	// make the hillshade if output_hillshade_fname is specified
+	if (output_hillshade_fname.has_value())
+	{
+		// TODO
+	}
+
+	// fill DEM and find sinkholes
+	std::vector<Sinkhole> sinkholes;
+    fill_dem(dem, sinkholes, settings);
+
+	// write modified hillshade if output_hillshade_fname is specified
+	if (output_hillshade_fname.has_value())
+	{
+		// TODO
+	}
+
+	// write sinkholes if output_sinkholes_fname is specified
+	if (output_sinkholes_fname.has_value())
+	{
+		string fname = output_sinkholes_fname.value();
+		
+	}
 }
 
 int main(int argc, char** argv)
@@ -276,6 +314,9 @@ int main(int argc, char** argv)
         std::exit(1);
     }
 
+	cout << "-oh argument: " << program.get<std::string>("-oh") << endl;
+	return 0;
+
     if (!program.is_used("-oh") && !program.is_used("-os"))
     {
         std::cerr << "At least one output option must be specified. Exiting." << std::endl;
@@ -283,58 +324,11 @@ int main(int argc, char** argv)
         std::exit(1);
     }
 
+	Settings settings = Settings(); // TODO read from settings file if specified
+
     std::string input_fname = program.get<std::string>("-i");
 
-    CDEM dem;
-    double geoTransofrmArgs[6];
-    bool read_result = readTIFF(input_fname.c_str(),
-        GDALDataType::GDT_Float32, dem, geoTransofrmArgs);
-    if (!read_result)
-    {
-        std::cerr << "Error occurred while reading GeoTIFF file " << input_fname << ". Exiting." << endl;
-        std::exit(1);
-    }
-
-	// Now we actually start processing the DEM
-
-	// make the hillshade
-	// TODO
-
-	// fill DEM and find sinkholes
-	std::vector<Sinkhole> sinkholes;
-    fill_dem(dem, sinkholes);
-
-	// write modified hillshade
-	// TOOD
-
-	// write sinkholes
-	// TOOD
-
-	double min, max, mean, stdDev;
-	calculateStatistics(dem, &min, &max, &mean, &stdDev);
-
-    std::string output_hillshade_fname = program.get<std::string>("-oh");
-    const char* output_hillshade_fname_cstr = output_hillshade_fname.c_str();
-    CreateGeoTIFF(output_hillshade_fname_cstr,
-        dem.Get_NY(),
-        dem.Get_NX(),
-        dem.getDEMdata(),
-        GDALDataType::GDT_Float32,
-        geoTransofrmArgs,
-        &min,
-        &max,
-        &mean,
-        &stdDev,
-        NO_DATA_VALUE);
-    
-    cout << "Wrote filled dem to " << output_hillshade_fname << endl;
-    cout << "geoTransformArgs:" << endl;
-    for (int i = 0; i < 6; i++)
-    {
-        cout << geoTransofrmArgs[i] << " ";
-    }
-    cout << endl;
-    // Construct difference DEM
+    handle_dem(input_fname, program.get<std::string>("-oh"), program.get<std::string>("-os"), settings);
 
     return 0;
 }

@@ -20,6 +20,7 @@ class Settings
     static constexpr float DEFAULT_HILLSHADE_Z_FACTOR = 1.0;
     static constexpr float DEFAULT_HILLSHADE_AZIMUTH = 315.0;
     static constexpr float DEFAULT_HILLSHADE_ALTITUDE = 45.0;
+    static constexpr int DEFAULT_MAX_POINTS_PER_FILE = -1;
     static constexpr bool DEFAULT_VERBOSE = true;
 
 
@@ -34,6 +35,7 @@ class Settings
     const float HILLSHADE_Z_FACTOR;
     const float HILLSHADE_AZIMUTH;
     const float HILLSHADE_ALTITUDE;
+    const int MAX_POINTS_PER_FILE;
     const bool VERBOSE;
 
     Settings(
@@ -47,6 +49,7 @@ class Settings
         float hillshade_z_factor = DEFAULT_HILLSHADE_Z_FACTOR,
         float hillshade_azimuth = DEFAULT_HILLSHADE_AZIMUTH,
         float hillshade_altitude = DEFAULT_HILLSHADE_ALTITUDE,
+        int max_points_per_file = DEFAULT_MAX_POINTS_PER_FILE,
         bool verbose = DEFAULT_VERBOSE
     )
         : RESOLUTION_X(resolution_x),
@@ -59,6 +62,7 @@ class Settings
         HILLSHADE_Z_FACTOR(hillshade_z_factor),
         HILLSHADE_AZIMUTH(hillshade_azimuth),
         HILLSHADE_ALTITUDE(hillshade_altitude),
+        MAX_POINTS_PER_FILE(max_points_per_file),
         VERBOSE(verbose)
     {
 

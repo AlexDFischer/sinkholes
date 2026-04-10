@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "gdal_priv.h"
+#include "ogr_spatialref.h"
 #include "utils.h"
 
 class Sinkhole
@@ -34,6 +36,8 @@ class Sinkhole
     std::string info_string(float x_unit, float y_unit);
 
     Color get_color(Settings& settings);
+
+    std::string to_wgs84(const double* geo_transform, const std::string& wkt);
 };
 
 #endif

@@ -6,8 +6,6 @@
 #include <algorithm>
 #include "dem.h"
 
-typedef array<std::uint8_t, 3> Color;
-
 void calculateStatistics(const CDEM& dem, double* min, double* max, double* mean, double* stdDev);
 
 extern int	irow[8];
@@ -25,7 +23,7 @@ void setFlag(int index, unsigned char* flagArray);
 bool isProcessed(int index, const unsigned char* flagArray);
 bool  CreateGeoTIFF(const char* path,int height, int width,void* pData, GDALDataType type, double* geoTransformArray6Eles,
 					double* min, double* max, double* mean, double* stdDev, double nodatavalue);
-bool readTIFF(const char* path, GDALDataType type, CDEM& dem, double* geoTransformArray6Eles);
+bool readTIFF(const char* path, GDALDataType type, CDEM& dem, double* geoTransformArray6Eles, std::string* wkt_out = nullptr);
 CDEM* diff(CDEM& demA, CDEM& demB);
 extern const unsigned char value[8];
 class BitArray2d
