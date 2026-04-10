@@ -32,6 +32,8 @@ using std::binary_function;
 typedef std::vector<Cell> NodeVector;
 typedef std::priority_queue<Cell, NodeVector, Cell::Greater> PriorityQueue;
 
+Color nodata_color = {0, 0, 0}; // TODO allow user to change this in settings
+
 void my_InitPriorityQue_onepass(CDEM& dem,
     BitArray2d& flag,
     queue<Cell>& traceQueue,
@@ -72,7 +74,9 @@ void my_ProcessPit_onepass(CDEM& dem,
     queue<Cell>& depressionQueue,
     queue<Cell>& traceQueue,
     PriorityQueue& priorityQueue,
-    Sinkhole& sinkhole)
+    Sinkhole& sinkhole,
+    std::vector<uint8_t>* hillshade_rgb,
+	Settings& settings)
 {
 	int neighbor_row, neighbor_col,i;
 	float neighbor_elevation;
@@ -108,6 +112,22 @@ void my_ProcessPit_onepass(CDEM& dem,
             else
             {
                 // depression cell
+				if (hillshade_rgb != nullptr)
+				{
+					Color color;
+					if (dem.is_NoData(neighbor_row, neighbor_col))
+					{
+						color = nodata_color;
+					}
+					else
+					{
+						color =  settings.depth_to_color(current_node.spill_elevation - neighbor_elevation);
+					}
+					(*hillshade_rgb)[(neighbor_row * width + neighbor_col) * 3 + 0] = color.r;
+					(*hillshade_rgb)[(neighbor_row * width + neighbor_col) * 3 + 1] = color.g;
+					(*hillshade_rgb)[(neighbor_row * width + neighbor_col) * 3 + 2] = color.b;
+				}
+
                 sinkhole.update(dem, neighbor_row, neighbor_col, current_node.spill_elevation);
 
                 visited.set_true(neighbor_row,neighbor_col);
@@ -185,9 +205,9 @@ void my_ProcessTraceQue_onepass(CDEM& dem,
 	}
 }
 
-void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes, Settings& settings)
+void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes, Settings& settings, std::vector<uint8_t>* hillshade_rgb)
 {
-    // more or less directly copy FillDEM_Zhou_OnePass
+    // modified version of FillDEM_Zhou_OnePass
 
     queue<Cell> traceQueue;
 	queue<Cell> depressionQueue;
@@ -217,15 +237,34 @@ void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes, Settings& settings)
 
 		for (int i = 0; i < 8; i++)
 		{
-
 			neighbor_row = get_neighbor_row(i, row);
 			neighbor_col = get_neighbor_col(i, col);
 
-			if (visited.is_visited(neighbor_row,neighbor_col)) continue;
+			if (visited.is_visited(neighbor_row,neighbor_col))
+			{
+				continue;
+			}
+
 			neighbor_elevation = dem.asFloat(neighbor_row, neighbor_col);
 			if (neighbor_elevation <= spill_elevation)
 			{
 				//depression cell
+				if (hillshade_rgb != nullptr)
+				{
+					Color color;
+					if (dem.is_NoData(neighbor_row, neighbor_col))
+					{
+						color = nodata_color;
+					}
+					else
+					{
+						color =  settings.depth_to_color(spill_elevation - neighbor_elevation);
+					}
+					(*hillshade_rgb)[(neighbor_row * width + neighbor_col) * 3 + 0] = color.r;
+					(*hillshade_rgb)[(neighbor_row * width + neighbor_col) * 3 + 1] = color.g;
+					(*hillshade_rgb)[(neighbor_row * width + neighbor_col) * 3 + 2] = color.b;
+				}
+
                 Sinkhole sinkhole = Sinkhole();
 				sinkhole.elevation = spill_elevation;
                 sinkhole.update(dem, neighbor_row, neighbor_col, spill_elevation);
@@ -240,7 +279,8 @@ void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes, Settings& settings)
 				cell.spill_elevation = spill_elevation;
 				depressionQueue.push(cell);
 
-				my_ProcessPit_onepass(dem, visited, depressionQueue, traceQueue, priorityQueue, sinkhole);
+				my_ProcessPit_onepass(dem, visited, depressionQueue, traceQueue, priorityQueue, sinkhole, hillshade_rgb, settings);
+
 				if (sinkhole.max_depth >= settings.MIN_SINKHOLE_DEPTH && sinkhole.area >= settings.MIN_SINKHOLE_AREA)
 				{
 					sinkholes.push_back(sinkhole);
@@ -463,6 +503,112 @@ void export_sinkholes_geojson(const string& output_fname, const vector<Sinkhole>
     }
 }
 
+// Returns a flat RGB uint8_t buffer, row-major, 3 bytes per pixel (R, G, B).
+// Uses Horn's method for slope/aspect and the standard hillshade formula.
+// Border pixels replicate their nearest interior neighbor for the gradient computation.
+static std::vector<uint8_t> compute_hillshade(const CDEM& dem, const double* geo_transform, const Settings& settings)
+{
+    int width  = dem.Get_NX();
+    int height = dem.Get_NY();
+
+    // Pixel size in CRS units (geotransform[5] is negative for north-up rasters)
+    double cell_size_x = std::fabs(geo_transform[1]);
+    double cell_size_y = std::fabs(geo_transform[5]);
+
+    double zenith_rad  = (90.0 - settings.HILLSHADE_ALTITUDE) * M_PI / 180.0;
+    // Convert geographic azimuth (N=0, clockwise) to math azimuth (E=0, counterclockwise)
+    double azimuth_rad = (360.0 - settings.HILLSHADE_AZIMUTH + 90.0) * M_PI / 180.0;
+
+    std::vector<uint8_t> rgb(width * height * 3);
+
+    auto get_z = [&](int row, int col) -> float {
+        row = std::max(0, std::min(row, height - 1));
+        col = std::max(0, std::min(col, width  - 1));
+        float v = dem.asFloat(row, col);
+        return dem.is_NoData(row, col) ? 0.0f : v;
+    };
+
+    for (int row = 0; row < height; row++)
+    {
+        for (int col = 0; col < width; col++)
+        {
+            uint8_t shade = 0;
+
+            if (!dem.is_NoData(row, col))
+            {
+                // 3x3 neighbourhood (Horn's method)
+                //  a b c
+                //  d e f   e = center (row, col)
+                //  g h i
+                float a = get_z(row-1, col-1), b = get_z(row-1, col), c = get_z(row-1, col+1);
+                float d = get_z(row,   col-1),                         f = get_z(row,   col+1);
+                float g = get_z(row+1, col-1), h = get_z(row+1, col), i = get_z(row+1, col+1);
+
+                double dz_dx = ((c + 2.0*f + i) - (a + 2.0*d + g)) / (8.0 * cell_size_x);
+                double dz_dy = ((g + 2.0*h + i) - (a + 2.0*b + c)) / (8.0 * cell_size_y);
+
+                dz_dx *= settings.HILLSHADE_Z_FACTOR;
+                dz_dy *= settings.HILLSHADE_Z_FACTOR;
+
+                double slope_rad  = std::atan(std::sqrt(dz_dx*dz_dx + dz_dy*dz_dy));
+                double aspect_rad = std::atan2(dz_dy, -dz_dx);
+
+                double val = std::cos(zenith_rad) * std::cos(slope_rad)
+                           + std::sin(zenith_rad) * std::sin(slope_rad) * std::cos(azimuth_rad - aspect_rad);
+
+                shade = static_cast<uint8_t>(std::max(0.0, std::min(255.0, 255.0 * val)));
+            }
+
+            int idx = (row * width + col) * 3;
+            rgb[idx]     = shade;
+            rgb[idx + 1] = shade;
+            rgb[idx + 2] = shade;
+        }
+    }
+
+    return rgb;
+}
+
+static void write_rgb_tiff(
+    const std::string& path,
+    const std::vector<uint8_t>& rgb,
+    int width,
+    int height,
+    const double* geo_transform,
+    const std::string& wkt)
+{
+    GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
+    GDALDataset* ds = driver->Create(path.c_str(), width, height, 3, GDT_Byte, nullptr);
+    if (ds == nullptr)
+    {
+        std::cerr << "Failed to create output hillshade file: " << path << std::endl;
+        return;
+    }
+
+    ds->SetGeoTransform(const_cast<double*>(geo_transform));
+    ds->SetProjection(wkt.c_str());
+
+    // Write all 3 bands in one call using interleaved (R,G,B per pixel) layout
+    int band_list[3] = {1, 2, 3};
+    CPLErr err = ds->RasterIO(GF_Write, 0, 0, width, height,
+        const_cast<uint8_t*>(rgb.data()),
+        width, height, GDT_Byte,
+        3, band_list,
+        3,           // nPixelSpace: bytes between pixels
+        width * 3,   // nLineSpace:  bytes between rows
+        1,           // nBandSpace:  bytes between bands within one pixel
+        nullptr);
+    if (err != CE_None)
+    {
+        std::cerr << "Error writing hillshade to " << path << ": "
+                  << CPLGetLastErrorMsg() << std::endl;
+        GDALClose(ds);
+        return;
+    }
+
+    GDALClose(ds);
+}
+
 void handle_dem(string input_fname, optional<string> output_hillshade_fname, optional<string> output_sinkholes_fname, Settings& settings)
 {
 	CDEM dem;
@@ -479,14 +625,18 @@ void handle_dem(string input_fname, optional<string> output_hillshade_fname, opt
 	// Now we actually start processing the DEM
 
 	// make the hillshade if output_hillshade_fname is specified
+	std::vector<uint8_t> hillshade_rgb;
 	if (output_hillshade_fname.has_value())
 	{
-		// TODO
+		hillshade_rgb = compute_hillshade(dem, geoTransofrmArgs, settings);
 	}
 
 	// fill DEM and find sinkholes
 	std::vector<Sinkhole> sinkholes;
-    fill_dem(dem, sinkholes, settings);
+    fill_dem(dem,
+		sinkholes,
+		settings, 
+		output_hillshade_fname.has_value() ? &hillshade_rgb : nullptr);
 	if (settings.VERBOSE)
 	{
     	std::cout << "Finished filling DEM." << std::endl;
@@ -495,7 +645,12 @@ void handle_dem(string input_fname, optional<string> output_hillshade_fname, opt
 	// write modified hillshade if output_hillshade_fname is specified
 	if (output_hillshade_fname.has_value())
 	{
-		// TODO
+		write_rgb_tiff(output_hillshade_fname.value(), hillshade_rgb,
+			dem.Get_NX(), dem.Get_NY(), geoTransofrmArgs, wkt);
+		if (settings.VERBOSE)
+		{
+			std::cout << "Finished writing hillshade." << std::endl;
+		}
 	}
 
 	// write sinkholes if output_sinkholes_fname is specified
@@ -551,6 +706,7 @@ int main(int argc, char** argv)
 			size_t dot = input_fname.rfind('.');
 			string prefix = (dot == std::string::npos) ? input_fname : input_fname.substr(0, dot);
 			string ext    = (dot == std::string::npos) ? ""            : input_fname.substr(dot);
+			cout << "prefix: " << prefix << ", ext: " << ext << endl;
 			output_fname = prefix + "_hillshade" + ext;
 		}
 		else
@@ -564,10 +720,11 @@ int main(int argc, char** argv)
 				string ext    = (dot == std::string::npos) ? ""            : input_fname.substr(dot);
 				output_fname = output_fname + "/" + prefix.substr(prefix.find_last_of("/\\") + 1) + "_hillshade" + ext;
 			}
+		}
 
 			output_hillshade_fname = output_fname;
-		}
 	}
+	
 	optional<string> output_sinkholes_fname = program.is_used("-os") ? optional<string>(program.get<std::string>("-os")) : std::nullopt;
 	if (program.is_used("-os"))
 	{
