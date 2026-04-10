@@ -198,7 +198,7 @@ void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes, Settings& settings)
 	BitArray2d visited;
 	if (!visited.Init(width,height)) {
 		printf("Failed to allocate memory!\n");
-		return;
+		exit(1);
 	}
 
 	PriorityQueue priorityQueue;
@@ -229,7 +229,7 @@ void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes, Settings& settings)
                 Sinkhole sinkhole = Sinkhole();
 				sinkhole.elevation = spill_elevation;
                 sinkhole.update(dem, neighbor_row, neighbor_col, spill_elevation);
-				
+
 				if (!dem.is_NoData(neighbor_row, neighbor_col))
 				{
 					dem.set_value(neighbor_row, neighbor_col, spill_elevation);
@@ -239,12 +239,10 @@ void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes, Settings& settings)
 				cell.col = neighbor_col;
 				cell.spill_elevation = spill_elevation;
 				depressionQueue.push(cell);
-				cout << "about to call processPit" << endl;
 
 				my_ProcessPit_onepass(dem, visited, depressionQueue, traceQueue, priorityQueue, sinkhole);
 				if (sinkhole.max_depth >= settings.MIN_SINKHOLE_DEPTH && sinkhole.area >= settings.MIN_SINKHOLE_AREA)
 				{
-					cout << "adding sinkhole in fill_dem with depth " << sinkhole.max_depth << " and area " << sinkhole.area << endl;
 					sinkholes.push_back(sinkhole);
 				}
 			}
@@ -340,15 +338,12 @@ static void write_sinkholes_geojson_chunk(
 		return;
 	}
 
-	cout << "entered write_sinkholes_geojson_chunk" << std::endl;
-	cout << "Exporting " << sinkholes.size() << " sinkholes to GeoJSON file " << output_fname << "..." << std::endl;
     using json = nlohmann::json;
 
     std::string folder_uuid = generate_uuid();
     std::string folder_uuid_hex = uuid_to_hex(folder_uuid);
     std::string now_str = current_datetime_str();
     auto [pixel_width_m, pixel_height_m] = get_pixel_size_meters(geo_transform, wkt);
-	cout << "got pixel size" << endl;
 
     float min_depth = sinkholes[0].max_depth;
     float max_depth = sinkholes[0].max_depth;
@@ -357,8 +352,6 @@ static void write_sinkholes_geojson_chunk(
         min_depth = std::min(min_depth, s.max_depth);
         max_depth = std::max(max_depth, s.max_depth);
     }
-
-	cout << "calculated min/max depth" << endl;
 
     std::ostringstream notes_ss;
     notes_ss << std::fixed << std::setprecision(1)
@@ -376,8 +369,6 @@ static void write_sinkholes_geojson_chunk(
         {"features", json::array()}
     };
 
-	cout << "made output object" << endl;
-
     // Folder feature for Caltopo
     output["features"].push_back({
         {"geometry", nullptr},
@@ -391,7 +382,6 @@ static void write_sinkholes_geojson_chunk(
         }}
     });
 
-	cout << "about to loop thru sinkholes" << std::endl;
     for (const Sinkhole& s : sinkholes)
     {
         auto [lat, lon] = const_cast<Sinkhole&>(s).to_wgs84(geo_transform, wkt);
@@ -437,16 +427,12 @@ static void write_sinkholes_geojson_chunk(
         });
     }
 
-	std::cout << "Finished creating GeoJSON object, now writing to file..." << std::endl;
-
     std::ofstream file(output_fname);
     file << output.dump(4);
 }
 
 void export_sinkholes_geojson(const string& output_fname, const vector<Sinkhole>& sinkholes, const double* geo_transform, const std::string& wkt, Settings& settings)
 {
-	cout << "entered export_sinkholes_geojson" << std::endl;
-	cout << "Exporting " << sinkholes.size() << " sinkholes to GeoJSON..." << std::endl;
     int max_points = settings.MAX_POINTS_PER_FILE;
     int n = static_cast<int>(sinkholes.size());
 
@@ -530,10 +516,10 @@ int main(int argc, char** argv)
     program.add_argument("-i", "--input")
         .help("Input DEM to find sinkholes within.")
         .required();
-    program.add_argument("-oh", "--output-hillshade")
-        .help("Output hillshade raster .tif with sinkholes highlighted.");
-    program.add_argument("-os", "--output-sinkholes")
-        .help("Output .geojson file with sinkholes.");
+    program.add_argument("-oh", "--output-hillshade").default_value("")
+        .help("Output hillshade raster .tif with sinkholes highlighted. If the flag is used but no filename is provided, the hillshade will be written to the same location as the input DEM with '_hillshade' appended to the filename. If the path provided is a folder, the hillshade will be written to that folder with the same filename as the input DEM, with _hillshade appended to the filename.");
+    program.add_argument("-os", "--output-sinkholes").default_value("")
+        .help("Output .geojson file with sinkholes. If the flag is used but no filename is provided, the GeoJSON will be written to the same location as the input DEM with .geojson extension. If the path provided is a folder, the GeoJSON will be written to that folder with the same filename as the input DEM, with .geojson extension.");
     
     try
     {
@@ -554,10 +540,62 @@ int main(int argc, char** argv)
     }
 
 	Settings settings = Settings(); // TODO read from settings file if specified
-\
 
-	optional<string> output_hillshade_fname = program.is_used("-oh") ? optional<string>(program.get<std::string>("-oh")) : std::nullopt;
+	optional<string> output_hillshade_fname = nullopt;
+	if (program.is_used("-oh"))
+	{
+		string input_fname = program.get<std::string>("-i");
+		string output_fname = program.get<std::string>("-oh");
+		if (output_fname.empty())
+		{
+			size_t dot = input_fname.rfind('.');
+			string prefix = (dot == std::string::npos) ? input_fname : input_fname.substr(0, dot);
+			string ext    = (dot == std::string::npos) ? ""            : input_fname.substr(dot);
+			output_fname = prefix + "_hillshade" + ext;
+		}
+		else
+		{
+			// check if output_fname is a folder
+			struct stat info;
+			if (stat(output_fname.c_str(), &info) == 0 && (info.st_mode & S_IFDIR))
+			{
+				size_t dot = input_fname.rfind('.');
+				string prefix = (dot == std::string::npos) ? input_fname : input_fname.substr(0, dot);
+				string ext    = (dot == std::string::npos) ? ""            : input_fname.substr(dot);
+				output_fname = output_fname + "/" + prefix.substr(prefix.find_last_of("/\\") + 1) + "_hillshade" + ext;
+			}
+
+			output_hillshade_fname = output_fname;
+		}
+	}
 	optional<string> output_sinkholes_fname = program.is_used("-os") ? optional<string>(program.get<std::string>("-os")) : std::nullopt;
+	if (program.is_used("-os"))
+	{
+		string input_fname = program.get<std::string>("-i");
+		string output_fname = program.get<std::string>("-os");
+		if (output_fname.empty())
+		{
+			size_t dot = input_fname.rfind('.');
+			string prefix = (dot == std::string::npos) ? input_fname : input_fname.substr(0, dot);
+			output_fname = prefix + ".geojson";
+		}
+		else
+		{
+			// check if output_fname is a folder
+			struct stat info;
+			if (stat(output_fname.c_str(), &info) == 0 && (info.st_mode & S_IFDIR))
+			{
+				size_t dot = input_fname.rfind('.');
+				string prefix = (dot == std::string::npos) ? input_fname : input_fname.substr(0, dot);
+				output_fname = output_fname + "/" + prefix.substr(prefix.find_last_of("/\\") + 1) + ".geojson";
+			}
+		}
+
+		output_sinkholes_fname = output_fname;
+	}
+
+	std::cout << "output_hillshade_fname: " << (output_hillshade_fname.has_value() ? output_hillshade_fname.value() : "none") << std::endl;
+	std::cout << "output_sinkholes_fname: " << (output_sinkholes_fname.has_value() ? output_sinkholes_fname.value() : "none") << std::endl;
 
 	if (program.is_used("-i"))
 	{
