@@ -20,7 +20,7 @@ bin/bug.o: dem.h Cell.h utils.h bug.cpp
 bin/colors.o: colors.h colors.cpp
 	g++ -c colors.cpp $(CXXFLAGS) -o bin/colors.o
 
-bin/find_sinkholes.o: dem.h Cell.h utils.h settings.h argparse.hpp settings.h sinkhole.h find_sinkholes.cpp
+bin/find_sinkholes.o: dem.h Cell.h utils.h settings.h argparse.hpp json.hpp settings.h sinkhole.h find_sinkholes.cpp
 	g++ -c find_sinkholes.cpp $(CXXFLAGS) -o bin/find_sinkholes.o
 
 bin/sinkhole.o: utils.h settings.h sinkhole.h sinkhole.cpp

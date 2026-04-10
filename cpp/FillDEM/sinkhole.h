@@ -16,6 +16,7 @@ class Sinkhole
     int min_y;
     int max_y;
     float max_depth;
+    float elevation;
     int x;
     int y;
 
@@ -27,6 +28,7 @@ class Sinkhole
     min_y(std::numeric_limits<int>::max()),
     max_y(std::numeric_limits<int>::min()),
     max_depth(0.0f),
+    elevation(0.0f),
     x(0),
     y(0)
     {
@@ -37,7 +39,8 @@ class Sinkhole
 
     Color get_color(Settings& settings);
 
-    std::string to_wgs84(const double* geo_transform, const std::string& wkt);
+    // Returns {latitude, longitude} in WGS84 decimal degrees
+    std::pair<double, double> to_wgs84(const double* geo_transform, const std::string& wkt);
 };
 
 #endif

@@ -10,8 +10,6 @@ using namespace std;
 class Settings
 {
     public:
-    static constexpr float DEFAULT_RESOLUTION_X = 1.0;
-    static constexpr float DEFAULT_RESOLUTION_Y = 1.0;
     static constexpr float DEFAULT_MIN_SINKHOLE_DEPTH = 0.5;
     static constexpr float DEFAULT_MIN_SINKHOLE_AREA = 0.0;
     static constexpr float DEFAULT_MIN_DEPTH_FOR_COLORMAP = 0.5;
@@ -25,8 +23,6 @@ class Settings
 
 
     public:
-    const float RESOLUTION_X;
-    const float RESOLUTION_Y;
     const float MIN_SINKHOLE_DEPTH;
     const float MIN_SINKHOLE_AREA;
     const float MIN_DEPTH_FOR_COLORMAP;
@@ -39,8 +35,6 @@ class Settings
     const bool VERBOSE;
 
     Settings(
-        float resolution_x = DEFAULT_RESOLUTION_X,
-        float resolution_y = DEFAULT_RESOLUTION_Y,
         float min_sinkhole_depth = DEFAULT_MIN_SINKHOLE_DEPTH,
         float min_sinkhole_area = DEFAULT_MIN_SINKHOLE_AREA,
         float min_depth_for_colormap = DEFAULT_MIN_DEPTH_FOR_COLORMAP,
@@ -52,9 +46,7 @@ class Settings
         int max_points_per_file = DEFAULT_MAX_POINTS_PER_FILE,
         bool verbose = DEFAULT_VERBOSE
     )
-        : RESOLUTION_X(resolution_x),
-        RESOLUTION_Y(resolution_y),
-        MIN_SINKHOLE_DEPTH(min_sinkhole_depth),
+        : MIN_SINKHOLE_DEPTH(min_sinkhole_depth),
         MIN_SINKHOLE_AREA(min_sinkhole_area),
         MIN_DEPTH_FOR_COLORMAP(min_depth_for_colormap),
         MAX_DEPTH_FOR_COLORMAP(max_depth_for_colormap),

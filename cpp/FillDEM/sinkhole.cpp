@@ -32,7 +32,7 @@ void Sinkhole::update(CDEM& dem, int row, int col, int spill_elevation)
     }
 }
 
-std::string Sinkhole::to_wgs84(const double* geo_transform, const std::string& wkt)
+std::pair<double, double> Sinkhole::to_wgs84(const double* geo_transform, const std::string& wkt)
 {
     // Convert pixel (col, row) to projected coordinates using the geotransform
     double proj_x = geo_transform[0] + x * geo_transform[1] + y * geo_transform[2];
@@ -52,12 +52,12 @@ std::string Sinkhole::to_wgs84(const double* geo_transform, const std::string& w
     OGRCoordinateTransformation* transform = OGRCreateCoordinateTransformation(&src_crs, &dst_crs);
     if (transform == nullptr)
     {
-        return "";
+        return {0.0, 0.0};
     }
 
     double lon = proj_x, lat = proj_y;
     transform->Transform(1, &lon, &lat);
     OGRCoordinateTransformation::DestroyCT(transform);
 
-    return std::to_string(lat) + ", " + std::to_string(lon);
+    return {lat, lon};
 }
