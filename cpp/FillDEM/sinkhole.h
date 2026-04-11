@@ -34,7 +34,7 @@ class Sinkhole
     {
     }
 
-    void update(CDEM& dem, int row, int col, int spill_elevation);
+    void update(CDEM& dem, int row, int col, float spill_elevation);
     std::string info_string(float x_unit, float y_unit);
 
     Color get_color(Settings& settings);

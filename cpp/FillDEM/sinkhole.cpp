@@ -16,7 +16,7 @@ std::string Sinkhole::info_string(float x_unit, float y_unit)
     return info;
 }
 
-void Sinkhole::update(CDEM& dem, int row, int col, int spill_elevation)
+void Sinkhole::update(CDEM& dem, int row, int col, float spill_elevation)
 {
     this->area += 1;
     this->min_x = std::min(this->min_x, col);

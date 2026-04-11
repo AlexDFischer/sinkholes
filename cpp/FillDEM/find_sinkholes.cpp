@@ -70,6 +70,7 @@ void my_InitPriorityQue_onepass(CDEM& dem,
 }
 
 void my_ProcessPit_onepass(CDEM& dem,
+	float spill_elevation,
     BitArray2d& visited,
     queue<Cell>& depressionQueue,
     queue<Cell>& traceQueue,
@@ -100,7 +101,7 @@ void my_ProcessPit_onepass(CDEM& dem,
             }
 
 			neighbor_elevation = dem.asFloat(neighbor_row, neighbor_col);
-			if (neighbor_elevation > current_node.spill_elevation) 
+			if (neighbor_elevation > spill_elevation) 
 			{
                 // slope cell
 				neighbor_node.row = neighbor_row;
@@ -121,23 +122,23 @@ void my_ProcessPit_onepass(CDEM& dem,
 					}
 					else
 					{
-						color =  settings.depth_to_color(current_node.spill_elevation - neighbor_elevation);
+						color =  settings.depth_to_color(spill_elevation - neighbor_elevation);
 					}
 					(*hillshade_rgb)[(neighbor_row * width + neighbor_col) * 3 + 0] = color.r;
 					(*hillshade_rgb)[(neighbor_row * width + neighbor_col) * 3 + 1] = color.g;
 					(*hillshade_rgb)[(neighbor_row * width + neighbor_col) * 3 + 2] = color.b;
 				}
 
-                sinkhole.update(dem, neighbor_row, neighbor_col, current_node.spill_elevation);
+                sinkhole.update(dem, neighbor_row, neighbor_col, spill_elevation);
 
                 visited.set_true(neighbor_row,neighbor_col);
 				if (!dem.is_NoData(neighbor_row, neighbor_col))
 				{
-                	dem.set_value(neighbor_row, neighbor_col, current_node.spill_elevation);
+                	dem.set_value(neighbor_row, neighbor_col, spill_elevation);
 				}
                 neighbor_node.row = neighbor_row;
                 neighbor_node.col = neighbor_col;
-                neighbor_node.spill_elevation = current_node.spill_elevation;
+                neighbor_node.spill_elevation = spill_elevation;
                 depressionQueue.push(neighbor_node);
             }
 		}
@@ -279,7 +280,7 @@ void fill_dem(CDEM& dem, std::vector<Sinkhole>& sinkholes, Settings& settings, s
 				cell.spill_elevation = spill_elevation;
 				depressionQueue.push(cell);
 
-				my_ProcessPit_onepass(dem, visited, depressionQueue, traceQueue, priorityQueue, sinkhole, hillshade_rgb, settings);
+				my_ProcessPit_onepass(dem, spill_elevation, visited, depressionQueue, traceQueue, priorityQueue, sinkhole, hillshade_rgb, settings);
 
 				if (sinkhole.max_depth >= settings.MIN_SINKHOLE_DEPTH && sinkhole.area >= settings.MIN_SINKHOLE_AREA)
 				{
@@ -422,27 +423,27 @@ static void write_sinkholes_geojson_chunk(
         }}
     });
 
-    for (const Sinkhole& s : sinkholes)
+    for (const Sinkhole& sinkhole : sinkholes)
     {
-        auto [lat, lon] = const_cast<Sinkhole&>(s).to_wgs84(geo_transform, wkt);
+        auto [lat, lon] = const_cast<Sinkhole&>(sinkhole).to_wgs84(geo_transform, wkt);
 
         std::ostringstream title_ss;
-        title_ss << std::fixed << std::setprecision(1) << "sinkhole " << s.max_depth << "d";
+        title_ss << std::fixed << std::setprecision(1) << "sinkhole " << sinkhole.max_depth << "d";
         if (pixel_width_m >= 0)
         {
-            double width_m  = (s.max_x - s.min_x) * pixel_width_m;
-            double height_m = (s.max_y - s.min_y) * pixel_height_m;
+            double width_m  = (sinkhole.max_x - sinkhole.min_x + 1) * pixel_width_m;
+            double height_m = (sinkhole.max_y - sinkhole.min_y + 1) * pixel_height_m;
             title_ss << " " << width_m << "w " << height_m << "l";
         }
 
         std::ostringstream sinkhole_notes_ss;
         sinkhole_notes_ss << std::fixed << std::setprecision(1)
-                          << "depth: " << s.max_depth << "m\n"
-                          << "area: " << area_to_string(s.area, pixel_width_m, pixel_height_m) << "\n"
-						  << "elevation: " << s.elevation << "m";
+                          << "depth: " << sinkhole.max_depth << "m\n"
+                          << "area: " << area_to_string(sinkhole.area, pixel_width_m, pixel_height_m) << "\n"
+						  << "elevation: " << sinkhole.elevation << "m";
 
-        std::string marker_color = color_to_hex(const_cast<Settings&>(settings).depth_to_color(s.max_depth));
-        std::string icon = const_cast<Settings&>(settings).depth_to_gaiagps_color(s.max_depth);
+        std::string marker_color = color_to_hex(const_cast<Settings&>(settings).depth_to_color(sinkhole.max_depth));
+        std::string icon = const_cast<Settings&>(settings).depth_to_gaiagps_color(sinkhole.max_depth);
 
         output["features"].push_back({
             {"type", "Feature"},
@@ -556,7 +557,7 @@ static std::vector<uint8_t> compute_hillshade(const CDEM& dem, const double* geo
                 double val = std::cos(zenith_rad) * std::cos(slope_rad)
                            + std::sin(zenith_rad) * std::sin(slope_rad) * std::cos(azimuth_rad - aspect_rad);
 
-                shade = static_cast<uint8_t>(std::max(0.0, std::min(255.0, 255.0 * val)));
+                shade = static_cast<uint8_t>(std::max(0.0, std::min(255.0, 255.0 * (val + 1.0) / 2.0)));
             }
 
             int idx = (row * width + col) * 3;
@@ -724,7 +725,7 @@ int main(int argc, char** argv)
 
 			output_hillshade_fname = output_fname;
 	}
-	
+
 	optional<string> output_sinkholes_fname = program.is_used("-os") ? optional<string>(program.get<std::string>("-os")) : std::nullopt;
 	if (program.is_used("-os"))
 	{

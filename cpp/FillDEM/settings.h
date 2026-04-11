@@ -17,7 +17,7 @@ class Settings
     static const string DEFAULT_COLORMAP;
     static constexpr float DEFAULT_HILLSHADE_Z_FACTOR = 1.0;
     static constexpr float DEFAULT_HILLSHADE_AZIMUTH = 315.0;
-    static constexpr float DEFAULT_HILLSHADE_ALTITUDE = 45.0;
+    static constexpr float DEFAULT_HILLSHADE_ALTITUDE = 30.0;
     static constexpr int DEFAULT_MAX_POINTS_PER_FILE = -1;
     static constexpr bool DEFAULT_VERBOSE = true;
 
