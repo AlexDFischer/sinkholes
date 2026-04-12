@@ -381,13 +381,6 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (download_elapsed > 0.0)
-        std::cout << std::fixed << std::setprecision(3)
-                  << "Download time:   " << download_elapsed << "s" << std::endl;
-    if (conversion_elapsed > 0.0)
-        std::cout << std::fixed << std::setprecision(3)
-                  << "Conversion time: " << conversion_elapsed << "s" << std::endl;
-
     bool oh_used = program.is_used("-oh");
     bool os_used = program.is_used("-os");
     std::string oh_value = oh_used ? program.get<std::string>("-oh") : "";
@@ -407,8 +400,8 @@ int main(int argc, char** argv)
         }
     }
 
-    int total = static_cast<int>(dem_files.size());
     auto tp0 = Clock::now();
+    int total = static_cast<int>(dem_files.size());
     for (int i = 0; i < total; i++)
     {
         const std::string& dem_path = dem_files[i];
@@ -430,8 +423,15 @@ int main(int argc, char** argv)
         }
     }
     double processing_elapsed = Seconds(Clock::now() - tp0).count();
+
+    if (download_elapsed > 0.0)
+        std::cout << std::fixed << std::setprecision(3)
+                  << "Download time:                      " << download_elapsed << "s" << std::endl;
+    if (conversion_elapsed > 0.0)
+        std::cout << std::fixed << std::setprecision(3)
+                  << "Point cloud to DEM conversion time: " << conversion_elapsed << "s" << std::endl;
     std::cout << std::fixed << std::setprecision(3)
-              << "Processing time: " << processing_elapsed << "s" << std::endl;
+                  << "DEM processing time:                " << processing_elapsed << "s" << std::endl;
 
     return 0;
 }
