@@ -1,0 +1,22 @@
+{
+    "min_sinkhole_depth": 0.5,
+    "min_sinkhole_area": 0.0,
+    "min_depth_for_colormap": 0.5,
+    "max_depth_for_colormap": 6.0,
+    "colormap": "rainbow_4_reverse",
+    "hillshade_z_factor": 1.0,
+    "hillshade_azimuth": 315.0,
+    "hillshade_altitude": 30.0,
+    "max_points_per_file": -1,
+    "verbose": true,
+    "resolution": 1.0,
+    "point_cloud_classifications": [1, 2, 7, 9, 21],
+    "point_clouds_dir": "point_clouds",
+    "dems_dir": "dems",
+    "output_dir": "output",
+    "sinkholes_qgis_style_file": "qgis_template/sinkholes_layer_style.qml",
+    "qgis_project_file": "qgis_template/template.qgz",
+    "sinkholes_qgis_group_name": "sinkholes",
+    "hillshade_qgis_group_name": "hillshades",
+    "nodata_value": -9999.0
+}

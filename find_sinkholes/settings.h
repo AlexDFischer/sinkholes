@@ -15,6 +15,7 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
+#include <stdexcept>
 #include <vector>
 
 #include "colors.h"
@@ -51,6 +52,7 @@ class Settings
     const float MIN_DEPTH_FOR_COLORMAP;
     const float MAX_DEPTH_FOR_COLORMAP;
     const Colormap& COLORMAP;
+    const string COLORMAP_NAME;
     const float HILLSHADE_Z_FACTOR;
     const float HILLSHADE_AZIMUTH;
     const float HILLSHADE_ALTITUDE;
@@ -93,7 +95,8 @@ class Settings
         MIN_SINKHOLE_AREA(min_sinkhole_area),
         MIN_DEPTH_FOR_COLORMAP(min_depth_for_colormap),
         MAX_DEPTH_FOR_COLORMAP(max_depth_for_colormap),
-        COLORMAP(rainbow_4_reverse_colormap), // TODO function that initializes here from string
+        COLORMAP(colormap_from_name(colormap)),
+        COLORMAP_NAME(colormap),
         HILLSHADE_Z_FACTOR(hillshade_z_factor),
         HILLSHADE_AZIMUTH(hillshade_azimuth),
         HILLSHADE_ALTITUDE(hillshade_altitude),

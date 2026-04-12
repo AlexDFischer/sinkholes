@@ -47,4 +47,8 @@ extern Colormap cool_colormap;
 
 extern Colormap gist_rainbow_colormap;
 
+// Returns a reference to the named colormap, or throws std::invalid_argument
+// if the name is not recognised.
+const Colormap& colormap_from_name(const std::string& name);
+
 #endif

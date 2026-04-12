@@ -12,7 +12,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <chrono>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <optional>
 #include <sstream>
@@ -297,7 +299,13 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    using Clock = std::chrono::steady_clock;
+    using Seconds = std::chrono::duration<double>;
+
     std::vector<std::string> dem_files;
+
+    double download_elapsed = 0.0;
+    double conversion_elapsed = 0.0;
 
     // 1. Download from bbox → convert to DEMs
     if (program.is_used("--bbox-lower-left") && program.is_used("--bbox-upper-right"))
@@ -310,12 +318,16 @@ int main(int argc, char** argv)
         auto [ll_lat, ll_lon] = parse_latlon(program.get<std::string>("--bbox-lower-left"));
         auto [ur_lat, ur_lon] = parse_latlon(program.get<std::string>("--bbox-upper-right"));
 
+        auto t0 = Clock::now();
         auto downloaded = download_point_clouds(ll_lat, ll_lon, ur_lat, ur_lon, settings, "response.json");
+        download_elapsed = Seconds(Clock::now() - t0).count();
+
         if (settings.VERBOSE)
             std::cout << "Downloaded " << downloaded.size() << " point cloud files." << std::endl;
 
         fs::create_directories(settings.DEMS_DIR);
         int n = static_cast<int>(downloaded.size());
+        auto tc0 = Clock::now();
         for (int i = 0; i < n; i++)
         {
             const std::string& laz_path = downloaded[i];
@@ -327,6 +339,7 @@ int main(int argc, char** argv)
             make_dem(laz_path, dem_path, settings);
             dem_files.push_back(dem_path);
         }
+        conversion_elapsed += Seconds(Clock::now() - tc0).count();
         if (settings.VERBOSE && n > 0)
             std::cout << std::endl;
     }
@@ -337,6 +350,7 @@ int main(int argc, char** argv)
         fs::create_directories(settings.DEMS_DIR);
         auto pcs = program.get<std::vector<std::string>>("--point-clouds");
         int n = static_cast<int>(pcs.size());
+        auto tc0 = Clock::now();
         for (int i = 0; i < n; i++)
         {
             const std::string& laz_path = pcs[i];
@@ -348,6 +362,7 @@ int main(int argc, char** argv)
             make_dem(laz_path, dem_path, settings);
             dem_files.push_back(dem_path);
         }
+        conversion_elapsed += Seconds(Clock::now() - tc0).count();
         if (settings.VERBOSE && n > 0)
             std::cout << std::endl;
     }
@@ -365,6 +380,13 @@ int main(int argc, char** argv)
         std::cerr << program;
         return 1;
     }
+
+    if (download_elapsed > 0.0)
+        std::cout << std::fixed << std::setprecision(3)
+                  << "Download time:   " << download_elapsed << "s" << std::endl;
+    if (conversion_elapsed > 0.0)
+        std::cout << std::fixed << std::setprecision(3)
+                  << "Conversion time: " << conversion_elapsed << "s" << std::endl;
 
     bool oh_used = program.is_used("-oh");
     bool os_used = program.is_used("-os");
@@ -386,6 +408,7 @@ int main(int argc, char** argv)
     }
 
     int total = static_cast<int>(dem_files.size());
+    auto tp0 = Clock::now();
     for (int i = 0; i < total; i++)
     {
         const std::string& dem_path = dem_files[i];
@@ -406,6 +429,9 @@ int main(int argc, char** argv)
             update_qgis_project(qgis_ctx, settings, hillshade_out, sinkholes_out);
         }
     }
+    double processing_elapsed = Seconds(Clock::now() - tp0).count();
+    std::cout << std::fixed << std::setprecision(3)
+              << "Processing time: " << processing_elapsed << "s" << std::endl;
 
     return 0;
 }

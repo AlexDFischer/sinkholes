@@ -12,6 +12,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <stdexcept>
+#include <unordered_map>
+
 #include "colors.h"
 
 string color_to_hex(const Color& color)
@@ -1833,3 +1836,26 @@ Colormap gist_rainbow_colormap = {
     {255, 0, 197},
     {255, 0, 191}
 };
+
+const Colormap& colormap_from_name(const std::string& name)
+{
+    static const std::unordered_map<std::string, const Colormap*> map = {
+        {"plasma_reverse",    &plasma_reverse_colormap},
+        {"rainbow_4_reverse", &rainbow_4_reverse_colormap},
+        {"viridis_reverse",   &viridis_reverse_colormap},
+        {"spring_reverse",    &spring_reverse_colormap},
+        {"winter_reverse",    &winter_reverse_colormap},
+        {"cool",              &cool_colormap},
+        {"gist_rainbow",      &gist_rainbow_colormap},
+    };
+
+    auto it = map.find(name);
+    if (it == map.end())
+    {
+        std::string valid;
+        for (const auto& [k, _] : map)
+            valid += "\n  " + k;
+        throw std::invalid_argument("Unknown colormap: \"" + name + "\". Valid colormaps are:" + valid);
+    }
+    return *it->second;
+}
