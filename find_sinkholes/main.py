@@ -7,9 +7,11 @@ import pdal
 from pprint import pprint
 import requests
 import subprocess
+import sys
 import tempfile
 
-from settings import Settings
+from find_sinkholes.settings import Settings
+find_sinkholes_binary_name = 'find_sinkholes'
 
 ERASE_LINE_CODE = '\033[2K'
 
@@ -36,21 +38,26 @@ class LidarProcessor:
         self.settings = settings
 
     def download_point_clouds(self,
-                              bbox_lower_left: list[float],
-                              bbox_upper_right: list[float],
+                              lower_left_latitude: float,
+                              lower_left_longitude: float,
+                              upper_right_latitude: float,
+                              upper_right_longitude: float,
                               usgs_response_output_fname: str | None=None) -> list[str]:
         """
         Download point clouds for the specified bounding box and save them to the output directory.
 
         Parameters:
-        - bbox_lower_left: A list of [latitude, longitude] defining the lower-left corner of the bounding box, in WGS84 coordinates.
-        - bbox_upper_right: A list of [latitude, longitude] defining the upper-right corner of the bounding box, in WGS84 coordinates.
+        - lower_left_latitude: Latitude of the lower-left corner of the bounding box.
+        - lower_left_longitude: Longitude of the lower-left corner of the bounding box.
+        - upper_right_latitude: Latitude of the upper-right corner of the bounding box.
+        - upper_right_longitude: Longitude of the upper-right corner of the bounding box.
+        - usgs_response_output_fname: Optional file name to save the raw USGS API response for debugging purposes. If None, the response will not be saved.
 
         Returns:
         - A list of file paths to the downloaded point clouds.
         """
 
-        point_cloud_list_url = f'https://tnmaccess.nationalmap.gov/api/v1/products?prodFormats=LAS,LAZ&datasets=Lidar%20Point%20Cloud%20(LPC)&bbox={bbox_lower_left[1]},{bbox_lower_left[0]},{bbox_upper_right[1]},{bbox_upper_right[0]},&'
+        point_cloud_list_url = f'https://tnmaccess.nationalmap.gov/api/v1/products?prodFormats=LAS,LAZ&datasets=Lidar%20Point%20Cloud%20(LPC)&bbox={lower_left_longitude},{lower_left_latitude},{upper_right_longitude},{upper_right_latitude},&'
         point_cloud_list_request = requests.request(url=point_cloud_list_url, method='GET')
         point_cloud_list = point_cloud_list_request.json()
 
@@ -59,7 +66,7 @@ class LidarProcessor:
                 json.dump(point_cloud_list, output_file, indent=2)
 
         if 'items' not in point_cloud_list:
-            print(f'Error fetching point cloud list for bbox {bbox_lower_left} to {bbox_upper_right}. Response is:')
+            print(f'Error fetching point cloud list for bbox {lower_left_latitude},{lower_left_longitude} to {upper_right_latitude},{upper_right_longitude}. Response is:')
             pprint(point_cloud_list)
             return []
         num_items = len(point_cloud_list['items'])
@@ -167,11 +174,7 @@ if __name__ == "__main__":
         dem_fnames.append(dem_fname)
         
     print(f'\nDone processing {num_point_clouds} point clouds into DEMs.')
-    
-    exit(0)
+
     for dem_fname in dem_fnames:
-        subprocess_args = ['process_dem', dem_fname]
-        if args.settings is not None:
-            subprocess_args.append('--settings')
-            subprocess_args.append(args.settings)
-        subprocess.call(subprocess_args)
+        pass
+        # TODO call find_sinkholes binary
