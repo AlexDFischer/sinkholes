@@ -1,3 +1,17 @@
+// Copyright (C) 2026 Alex Fischer
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, version 3.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 #include <fstream>
 #include <string>
 
@@ -11,6 +25,10 @@ const std::string Settings::DEFAULT_COLORMAP        = "rainbow_4_reverse";
 const std::string Settings::DEFAULT_POINT_CLOUDS_DIR = "point_clouds";
 const std::string Settings::DEFAULT_DEMS_DIR         = "dems";
 const std::string Settings::DEFAULT_OUTPUT_DIR       = "output";
+const std::string Settings::DEFAULT_SINKHOLES_QGIS_STYLE_FILE = "qgis_template/sinkholes_layer_style.qml";
+const std::string Settings::DEFAULT_QGIS_PROJECT_FILE         = "qgis_template/template.qgz";
+const std::string Settings::DEFAULT_SINKHOLES_QGIS_GROUP_NAME = "sinkholes";
+const std::string Settings::DEFAULT_HILLSHADE_QGIS_GROUP_NAME = "hillshades";
 
 Settings Settings::from_json(const std::string& json_path)
 {
@@ -36,6 +54,10 @@ Settings Settings::from_json(const std::string& json_path)
         j.value("point_clouds_dir",              DEFAULT_POINT_CLOUDS_DIR),
         j.value("dems_dir",                      DEFAULT_DEMS_DIR),
         j.value("output_dir",                    DEFAULT_OUTPUT_DIR),
+        j.value("sinkholes_qgis_style_file",     DEFAULT_SINKHOLES_QGIS_STYLE_FILE),
+        j.value("qgis_project_file",             DEFAULT_QGIS_PROJECT_FILE),
+        j.value("sinkholes_qgis_group_name",     DEFAULT_SINKHOLES_QGIS_GROUP_NAME),
+        j.value("hillshade_qgis_group_name",     DEFAULT_HILLSHADE_QGIS_GROUP_NAME),
         j.value("nodata_value",                  DEFAULT_NODATA_VALUE)
     );
 }

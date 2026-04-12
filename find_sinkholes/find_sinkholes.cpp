@@ -1,3 +1,17 @@
+// Copyright (C) 2026 Alex Fischer
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, version 3.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 #include <stdio.h>
 #include <iostream>
 #include <string>
@@ -649,7 +663,7 @@ void handle_dem(string input_fname, optional<string> output_hillshade_fname, opt
 			dem.Get_NX(), dem.Get_NY(), geoTransofrmArgs, wkt);
 		if (settings.VERBOSE)
 		{
-			std::cout << "Finished writing hillshade." << std::endl;
+			std::cout << "Finished writing hillshade to " << output_hillshade_fname.value() << "." << std::endl;
 		}
 	}
 
@@ -660,7 +674,7 @@ void handle_dem(string input_fname, optional<string> output_hillshade_fname, opt
 		export_sinkholes_geojson(fname, sinkholes, geoTransofrmArgs, wkt, settings);
 		 if (settings.VERBOSE)
 		{
-			std::cout << "Finished writing sinkholes GeoJSON." << std::endl;
+			std::cout << "Finished writing sinkholes GeoJSON to " << fname << "." << std::endl;
 		}
 	}
 }

@@ -1,3 +1,17 @@
+// Copyright (C) 2026 Alex Fischer
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, version 3.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
@@ -25,6 +39,10 @@ class Settings
     static const string DEFAULT_POINT_CLOUDS_DIR;
     static const string DEFAULT_DEMS_DIR;
     static const string DEFAULT_OUTPUT_DIR;
+    static const string DEFAULT_SINKHOLES_QGIS_STYLE_FILE;
+    static const string DEFAULT_QGIS_PROJECT_FILE;
+    static const string DEFAULT_SINKHOLES_QGIS_GROUP_NAME;
+    static const string DEFAULT_HILLSHADE_QGIS_GROUP_NAME;
     static constexpr float DEFAULT_NODATA_VALUE = -9999.0f;
 
     public:
@@ -43,6 +61,10 @@ class Settings
     const string POINT_CLOUDS_DIR;
     const string DEMS_DIR;
     const string OUTPUT_DIR;
+    const string SINKHOLES_QGIS_STYLE_FILE;
+    string QGIS_PROJECT_FILE;
+    const string SINKHOLES_QGIS_GROUP_NAME;
+    const string HILLSHADE_QGIS_GROUP_NAME;
     const float NODATA_VALUE;
 
     Settings(
@@ -61,6 +83,10 @@ class Settings
         string point_clouds_dir = DEFAULT_POINT_CLOUDS_DIR,
         string dems_dir = DEFAULT_DEMS_DIR,
         string output_dir = DEFAULT_OUTPUT_DIR,
+        string sinkholes_qgis_style_file = DEFAULT_SINKHOLES_QGIS_STYLE_FILE,
+        string qgis_project_file = DEFAULT_QGIS_PROJECT_FILE,
+        string sinkholes_qgis_group_name = DEFAULT_SINKHOLES_QGIS_GROUP_NAME,
+        string hillshade_qgis_group_name = DEFAULT_HILLSHADE_QGIS_GROUP_NAME,
         float nodata_value = DEFAULT_NODATA_VALUE
     )
         : MIN_SINKHOLE_DEPTH(min_sinkhole_depth),
@@ -78,6 +104,10 @@ class Settings
         POINT_CLOUDS_DIR(std::move(point_clouds_dir)),
         DEMS_DIR(std::move(dems_dir)),
         OUTPUT_DIR(std::move(output_dir)),
+        SINKHOLES_QGIS_STYLE_FILE(std::move(sinkholes_qgis_style_file)),
+        QGIS_PROJECT_FILE(std::move(qgis_project_file)),
+        SINKHOLES_QGIS_GROUP_NAME(std::move(sinkholes_qgis_group_name)),
+        HILLSHADE_QGIS_GROUP_NAME(std::move(hillshade_qgis_group_name)),
         NODATA_VALUE(nodata_value)
     {
     }

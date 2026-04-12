@@ -10,7 +10,8 @@ CURL_LIBS   = -lcurl
 CXXFLAGS    = --std=c++17 -fpermissive $(GDAL_CFLAGS) -I$(SRC)
 
 OBJS = build/main.o build/dem.o build/utils.o build/FillDEM_Zhou-OnePass.o \
-       build/find_sinkholes.o build/sinkhole.o build/settings.o build/colors.o
+       build/find_sinkholes.o build/sinkhole.o build/settings.o build/colors.o \
+       build/qgis_integration.o
 
 all: bin/find_sinkholes
 
@@ -39,6 +40,9 @@ build/FillDEM_Zhou-OnePass.o: $(SRC)/FillDEM_Zhou-OnePass.cpp $(SRC)/dem.h $(SRC
 	g++ -c $< $(CXXFLAGS) -o $@
 
 build/colors.o: $(SRC)/colors.cpp $(SRC)/colors.h | build
+	g++ -c $< $(CXXFLAGS) -o $@
+
+build/qgis_integration.o: $(SRC)/qgis_integration.cpp $(SRC)/qgis_integration.h $(SRC)/settings.h | build
 	g++ -c $< $(CXXFLAGS) -o $@
 
 bin build:

@@ -1,3 +1,17 @@
+// Copyright (C) 2026 Alex Fischer
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, version 3.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 #include <filesystem>
 #include <iostream>
 #include <optional>
@@ -11,6 +25,7 @@
 
 #include "argparse.hpp"
 #include "json.hpp"
+#include "qgis_integration.h"
 #include "settings.h"
 
 namespace fs = std::filesystem;
@@ -254,6 +269,8 @@ int main(int argc, char** argv)
     program.add_argument("-os", "--output-sinkholes").default_value(std::string(""))
         .help("Output sinkholes .geojson. Omit a value to write next to each input DEM; "
               "supply a directory to write all GeoJSON files there.");
+    program.add_argument("-q", "--qgis")
+        .help("Path to the QGIS project file, overriding the value in the settings file.");
 
     try
     {
@@ -269,6 +286,9 @@ int main(int argc, char** argv)
     Settings settings = program.is_used("--settings")
         ? Settings::from_json(program.get<std::string>("--settings"))
         : Settings();
+
+    if (program.is_used("--qgis"))
+        settings.QGIS_PROJECT_FILE = program.get<std::string>("--qgis");
 
     if (!program.is_used("-oh") && !program.is_used("-os"))
     {
@@ -351,6 +371,20 @@ int main(int argc, char** argv)
     std::string oh_value = oh_used ? program.get<std::string>("-oh") : "";
     std::string os_value = os_used ? program.get<std::string>("-os") : "";
 
+    // Resolve QGIS launch environment once before the loop.
+    bool use_qgis = program.is_used("--qgis");
+    QgisLaunchContext qgis_ctx;
+    if (use_qgis)
+    {
+        qgis_ctx = prepare_qgis_launch(argv[0]);
+        if (!qgis_ctx.valid())
+        {
+            std::cerr << "Warning: could not find QGIS Python installation. "
+                         "Outputs will not be added to the QGIS project." << std::endl;
+            use_qgis = false;
+        }
+    }
+
     int total = static_cast<int>(dem_files.size());
     for (int i = 0; i < total; i++)
     {
@@ -364,6 +398,13 @@ int main(int argc, char** argv)
         auto sinkholes_out = resolve_output_path(os_used, os_value, dem_path, "", ".geojson");
 
         handle_dem(dem_path, hillshade_out, sinkholes_out, settings);
+
+        if (use_qgis)
+        {
+            if (settings.VERBOSE)
+                std::cout << "Updating QGIS project: " << settings.QGIS_PROJECT_FILE << std::endl;
+            update_qgis_project(qgis_ctx, settings, hillshade_out, sinkholes_out);
+        }
     }
 
     return 0;
