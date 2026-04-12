@@ -1,9 +1,7 @@
 .vscode
-point_clouds
-dems
+point_clouds/
+dems/
+output/
+bin/
+build/
 __pycache__/
-**/*.o
-cpp/FillDEM/bin
-**/*.aux.xml
-**/*.tif
-**/*.geojson

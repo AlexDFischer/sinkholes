@@ -1,0 +1,8 @@
+name: sinkholes
+channels:
+  - conda-forge
+dependencies:
+  - gdal
+  - pdal
+  - libpdal-core
+  - curl
