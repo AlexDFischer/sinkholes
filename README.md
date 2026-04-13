@@ -5,7 +5,7 @@ It is primarily intended for use by cavers, to find caves. Closed depressions ma
 
 This program automatically extracts sinkholes from DEMs using depression filling algorithms (specifically a modified version of [fast priority-flood](https://www.sciencedirect.com/science/article/abs/pii/S0098300416300553)). It can also input point cloud .las/.laz files and turn them into DEMs (using PDAL). You don't even have to give the program point cloud files: you can specify the coordinates of a bounding box that specify an area you're interested in in the US, and it will automatically download point clouds from the [USGS's data download service](https://www.usgs.gov/the-national-map-data-delivery/gis-data-download).
 
-The program has two primary outputs: hillshade maps with sinkholes highlighted and colorcoded by depth, and .geojson files listing sinkholes with various statistics such as depth, area, and elevation. The program can automatically add these to a QGIS project you specify, and style layers how you like.
+The program has two primary outputs: hillshade maps with sinkholes highlighted and colorcoded by depth, and .geojson files listing sinkholes with various statistics such as depth, area, and elevation. The program can automatically add these to a QGIS project you specify, and style layers how you like. This QGIS project can be exported to [QField](https://qfield.org/) and viewed on your phone in the field, which is **extremely useful**.
 
 ![One sinkhole highlighted by depth on a hillshade map](docs/sinkhole_hillshade_screenshot.png)
 
@@ -25,7 +25,7 @@ You shouldn't have to install any Python beyond what comes installed automatical
 
 # Usage
 
-The `find_sinkholes` program in `bin/` is the executable. Run it with the following arguments:
+The `find_sinkholes` program that will be in `bin/` after you compile is the executable. Run it with the following arguments:
 
  * `-ll`, `--lower-left`. Lower left coordinate of boudning box around your region of interest. LIDAR point clouds from the USGS in this area will be automatically downloaded.
  * `-ur`, `--upper-right`. Upper right coordinate of boudning box around your region of interest. LIDAR point clouds from the USGS in this area will be automatically downloaded.
