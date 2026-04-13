@@ -101,7 +101,8 @@ std::vector<std::string> download_point_clouds(
         std::cerr << "Error fetching point cloud list for bbox "
                   << lower_left_lat << "," << lower_left_lon
                   << " to " << upper_right_lat << "," << upper_right_lon
-                  << ". Response:\n" << product_list.dump(2) << std::endl;
+                  << ". Response:\n" << product_list.dump(2) << std::endl
+                  << "This is likely a problem with the USGS 3DEP API. See if their service is working at https://apps.nationalmap.gov/downloader/#/" << std::endl;
         return {};
     }
 
@@ -305,7 +306,9 @@ int main(int argc, char** argv)
     std::vector<std::string> dem_files;
 
     double download_elapsed = 0.0;
-    double conversion_elapsed = 0.0;
+    double point_cloud_conversion_time = 0.0;
+
+    auto time_start = Clock::now();
 
     // 1. Download from bbox → convert to DEMs
     if (program.is_used("--bbox-lower-left") && program.is_used("--bbox-upper-right"))
@@ -317,17 +320,16 @@ int main(int argc, char** argv)
 
         auto [ll_lat, ll_lon] = parse_latlon(program.get<std::string>("--bbox-lower-left"));
         auto [ur_lat, ur_lon] = parse_latlon(program.get<std::string>("--bbox-upper-right"));
-
-        auto t0 = Clock::now();
         auto downloaded = download_point_clouds(ll_lat, ll_lon, ur_lat, ur_lon, settings, "response.json");
-        download_elapsed = Seconds(Clock::now() - t0).count();
+
+        auto time_finished_downloads = Clock::now();
+        download_elapsed = Seconds(time_finished_downloads - time_start).count();
 
         if (settings.VERBOSE)
             std::cout << "Downloaded " << downloaded.size() << " point cloud files." << std::endl;
 
         fs::create_directories(settings.DEMS_DIR);
         int n = static_cast<int>(downloaded.size());
-        auto tc0 = Clock::now();
         for (int i = 0; i < n; i++)
         {
             const std::string& laz_path = downloaded[i];
@@ -339,7 +341,7 @@ int main(int argc, char** argv)
             make_dem(laz_path, dem_path, settings);
             dem_files.push_back(dem_path);
         }
-        conversion_elapsed += Seconds(Clock::now() - tc0).count();
+        point_cloud_conversion_time += Seconds(Clock::now() - time_finished_downloads).count();
         if (settings.VERBOSE && n > 0)
             std::cout << std::endl;
     }
@@ -347,10 +349,10 @@ int main(int argc, char** argv)
     // 2. Convert specified point clouds → DEMs
     if (program.is_used("--point-clouds"))
     {
+        auto time_start_point_cloud_conversion = Clock::now();
         fs::create_directories(settings.DEMS_DIR);
         auto pcs = program.get<std::vector<std::string>>("--point-clouds");
         int n = static_cast<int>(pcs.size());
-        auto tc0 = Clock::now();
         for (int i = 0; i < n; i++)
         {
             const std::string& laz_path = pcs[i];
@@ -362,7 +364,7 @@ int main(int argc, char** argv)
             make_dem(laz_path, dem_path, settings);
             dem_files.push_back(dem_path);
         }
-        conversion_elapsed += Seconds(Clock::now() - tc0).count();
+        point_cloud_conversion_time += Seconds(Clock::now() - time_start_point_cloud_conversion).count();
         if (settings.VERBOSE && n > 0)
             std::cout << std::endl;
     }
@@ -400,7 +402,7 @@ int main(int argc, char** argv)
         }
     }
 
-    auto tp0 = Clock::now();
+    auto time_start_processing_dem = Clock::now();
     int total = static_cast<int>(dem_files.size());
     for (int i = 0; i < total; i++)
     {
@@ -422,16 +424,20 @@ int main(int argc, char** argv)
             update_qgis_project(qgis_ctx, settings, hillshade_out, sinkholes_out);
         }
     }
-    double processing_elapsed = Seconds(Clock::now() - tp0).count();
+    auto time_finished_processing_dems = Clock::now();
+    double processing_elapsed = Seconds(time_finished_processing_dems - time_start_processing_dem).count();
 
     if (download_elapsed > 0.0)
         std::cout << std::fixed << std::setprecision(3)
                   << "Download time:                      " << download_elapsed << "s" << std::endl;
-    if (conversion_elapsed > 0.0)
+    if (point_cloud_conversion_time > 0.0)
         std::cout << std::fixed << std::setprecision(3)
-                  << "Point cloud to DEM conversion time: " << conversion_elapsed << "s" << std::endl;
+                  << "Point cloud to DEM conversion time: " << point_cloud_conversion_time << "s" << std::endl;
     std::cout << std::fixed << std::setprecision(3)
                   << "DEM processing time:                " << processing_elapsed << "s" << std::endl;
+    
+    std::cout << std::fixed << std::setprecision(3)
+                  << "Total elapsed time:                 " << Seconds(time_finished_processing_dems - time_start).count() << "s" << std::endl;
 
     return 0;
 }

@@ -7,7 +7,9 @@ PDAL_CFLAGS = $(shell pdal-config --cflags)
 PDAL_LIBDIR = $(shell pdal-config --prefix)/lib
 PDAL_LIBS   = -L$(PDAL_LIBDIR) -lpdalcpp -Wl,-rpath,$(PDAL_LIBDIR)
 CURL_LIBS   = -lcurl
-CXXFLAGS    = --std=c++17 -fpermissive $(GDAL_CFLAGS) -I$(SRC)
+CXXFLAGS_RELEASE = --std=c++17 -O3 -march=native -DNDEBUG -fpermissive -ffast-math -funroll-loops -flto=auto
+CXXFLAGS_DEBUG   = --std=c++17 -O0 -g -fpermissive                                                                           
+CXXFLAGS         = $(CXXFLAGS_RELEASE) $(GDAL_CFLAGS) -I$(SRC)      
 
 OBJS = build/main.o build/dem.o build/utils.o build/FillDEM_Zhou-OnePass.o \
        build/find_sinkholes.o build/sinkhole.o build/settings.o build/colors.o \
@@ -16,7 +18,7 @@ OBJS = build/main.o build/dem.o build/utils.o build/FillDEM_Zhou-OnePass.o \
 all: bin/find_sinkholes
 
 bin/find_sinkholes: $(OBJS) | bin
-	g++ $(OBJS) $(GDAL_LIBS) $(PDAL_LIBS) $(CURL_LIBS) -o $@
+	g++ $(OBJS) -flto=auto $(GDAL_LIBS) $(PDAL_LIBS) $(CURL_LIBS) -o $@
 
 build/main.o: $(SRC)/main.cpp $(SRC)/settings.h $(SRC)/argparse.hpp $(SRC)/json.hpp | build
 	g++ -c $< $(CXXFLAGS) $(PDAL_CFLAGS) -o $@
