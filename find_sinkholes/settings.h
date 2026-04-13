@@ -25,9 +25,9 @@ using namespace std;
 class Settings
 {
     public:
-    static constexpr float DEFAULT_MIN_SINKHOLE_DEPTH = 0.5f;
+    static constexpr float DEFAULT_MIN_SINKHOLE_DEPTH = 0.3f;
     static constexpr float DEFAULT_MIN_SINKHOLE_AREA = 0.0f;
-    static constexpr float DEFAULT_MIN_DEPTH_FOR_COLORMAP = 0.5f;
+    static constexpr float DEFAULT_MIN_DEPTH_FOR_COLORMAP = 0.3f;
     static constexpr float DEFAULT_MAX_DEPTH_FOR_COLORMAP = 6.0f;
     static const string DEFAULT_COLORMAP;
     static constexpr float DEFAULT_HILLSHADE_Z_FACTOR = 1.0f;

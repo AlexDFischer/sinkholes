@@ -1,7 +1,7 @@
 {
-    "min_sinkhole_depth": 0.5,
+    "min_sinkhole_depth": 0.3,
     "min_sinkhole_area": 0.0,
-    "min_depth_for_colormap": 0.5,
+    "min_depth_for_colormap": 0.3,
     "max_depth_for_colormap": 6.0,
     "colormap": "rainbow_4_reverse",
     "hillshade_z_factor": 1.0,

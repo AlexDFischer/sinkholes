@@ -17,6 +17,10 @@ OBJS = build/main.o build/dem.o build/utils.o build/FillDEM_Zhou-OnePass.o \
 
 all: bin/find_sinkholes
 
+clean:                                                                                                                                                    
+	rm -rf build
+	rm -f bin/find_sinkholes 
+
 bin/find_sinkholes: $(OBJS) | bin
 	g++ $(OBJS) -flto=auto $(GDAL_LIBS) $(PDAL_LIBS) $(CURL_LIBS) -o $@
 
