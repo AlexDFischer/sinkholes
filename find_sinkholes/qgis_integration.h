@@ -41,7 +41,7 @@ QgisLaunchContext prepare_qgis_launch(const std::string& argv0);
 void update_qgis_project(
     const QgisLaunchContext& ctx,
     const Settings& settings,
-    const std::optional<std::string>& hillshade_out,
-    const std::optional<std::string>& sinkholes_out);
+    const std::vector<std::string>& hillshade_output_fnames,
+    const std::vector<std::string>& sinkholes_output_fnames);
 
 #endif

@@ -305,8 +305,10 @@ int main(int argc, char** argv)
 
     std::vector<std::string> dem_files;
 
-    double download_elapsed = 0.0;
+    double download_elapsed_time = 0.0;
     double point_cloud_conversion_time = 0.0;
+    double dem_processing_time = 0.0;
+    double qgis_layer_addition_time = 0.0;
 
     auto time_start = Clock::now();
 
@@ -323,7 +325,7 @@ int main(int argc, char** argv)
         auto downloaded = download_point_clouds(ll_lat, ll_lon, ur_lat, ur_lon, settings, "response.json");
 
         auto time_finished_downloads = Clock::now();
-        download_elapsed = Seconds(time_finished_downloads - time_start).count();
+        download_elapsed_time = Seconds(time_finished_downloads - time_start).count();
 
         if (settings.VERBOSE)
             std::cout << "Downloaded " << downloaded.size() << " point cloud files." << std::endl;
@@ -341,15 +343,17 @@ int main(int argc, char** argv)
             make_dem(laz_path, dem_path, settings);
             dem_files.push_back(dem_path);
         }
-        point_cloud_conversion_time += Seconds(Clock::now() - time_finished_downloads).count();
         if (settings.VERBOSE && n > 0)
             std::cout << std::endl;
+        point_cloud_conversion_time += Seconds(Clock::now() - time_finished_downloads).count();
     }
 
     // 2. Convert specified point clouds → DEMs
+
+    auto time_start_point_cloud_conversion = Clock::now();
+
     if (program.is_used("--point-clouds"))
     {
-        auto time_start_point_cloud_conversion = Clock::now();
         fs::create_directories(settings.DEMS_DIR);
         auto pcs = program.get<std::vector<std::string>>("--point-clouds");
         int n = static_cast<int>(pcs.size());
@@ -364,9 +368,10 @@ int main(int argc, char** argv)
             make_dem(laz_path, dem_path, settings);
             dem_files.push_back(dem_path);
         }
-        point_cloud_conversion_time += Seconds(Clock::now() - time_start_point_cloud_conversion).count();
         if (settings.VERBOSE && n > 0)
             std::cout << std::endl;
+
+        point_cloud_conversion_time += Seconds(Clock::now() - time_start_point_cloud_conversion).count();
     }
 
     // 3. Use directly specified DEMs
@@ -388,13 +393,49 @@ int main(int argc, char** argv)
     std::string oh_value = oh_used ? program.get<std::string>("-oh") : "";
     std::string os_value = os_used ? program.get<std::string>("-os") : "";
 
-    // Resolve QGIS launch environment once before the loop.
+    auto time_start_processing_dems = Clock::now();
+    std::vector<std::string> hillshade_output_fnames;
+    std::vector<std::string> sinkholes_output_fnames;
+    int num_dems = static_cast<int>(dem_files.size());
+    for (int i = 0; i < num_dems; i++)
+    {
+        const std::string& dem_path = dem_files[i];
+
+        if (settings.VERBOSE)
+            std::cout << "Processing DEM " << (i+1) << "/" << num_dems
+                      << ": " << dem_path << std::endl;
+
+        auto hillshade_output_fname = resolve_output_path(oh_used, oh_value, dem_path, "_hillshade", ".tif");
+        auto sinkholes_output_fname = resolve_output_path(os_used, os_value, dem_path, "", ".geojson");
+
+        handle_dem(dem_path, hillshade_output_fname, sinkholes_output_fname, settings);
+        if (hillshade_output_fname.has_value())
+        {
+            hillshade_output_fnames.push_back(hillshade_output_fname.value());
+        }
+        if (sinkholes_output_fname.has_value())
+        {
+            sinkholes_output_fnames.push_back(sinkholes_output_fname.value());
+        }
+    }
+    auto time_finished_processing_dems = Clock::now();
+    dem_processing_time = num_dems > 0 ? Seconds(time_finished_processing_dems - time_start_processing_dems).count() : 0.0;
+
+    // 4. Add sinkholes and hillshade files to QGIS project
+
+    // Resolve QGIS launch environment
     bool use_qgis = program.is_used("--qgis");
     QgisLaunchContext qgis_ctx;
     if (use_qgis)
     {
         qgis_ctx = prepare_qgis_launch(argv[0]);
-        if (!qgis_ctx.valid())
+        if (qgis_ctx.valid())
+        {
+            if (settings.VERBOSE)
+                std::cout << "Updating QGIS project: " << settings.QGIS_PROJECT_FILE << std::endl;
+            update_qgis_project(qgis_ctx, settings, hillshade_output_fnames, sinkholes_output_fnames);
+        }
+        else
         {
             std::cerr << "Warning: could not find QGIS Python installation. "
                          "Outputs will not be added to the QGIS project." << std::endl;
@@ -402,42 +443,31 @@ int main(int argc, char** argv)
         }
     }
 
-    auto time_start_processing_dem = Clock::now();
-    int total = static_cast<int>(dem_files.size());
-    for (int i = 0; i < total; i++)
+    auto time_finished = Clock::now();
+    qgis_layer_addition_time = use_qgis ? Seconds(time_finished - time_finished_processing_dems).count() : 0.0;
+
+    // Print timing information
+    if (settings.VERBOSE)
     {
-        const std::string& dem_path = dem_files[i];
+        double processing_time = Seconds(time_finished_processing_dems - time_start_processing_dems).count();
 
-        if (settings.VERBOSE)
-            std::cout << "Processing DEM " << (i+1) << "/" << total
-                      << ": " << dem_path << std::endl;
-
-        auto hillshade_out = resolve_output_path(oh_used, oh_value, dem_path, "_hillshade", ".tif");
-        auto sinkholes_out = resolve_output_path(os_used, os_value, dem_path, "", ".geojson");
-
-        handle_dem(dem_path, hillshade_out, sinkholes_out, settings);
-
-        if (use_qgis)
+        if (download_elapsed_time > 0.0)
+            std::cout << std::fixed << std::setprecision(3)
+                    << "Download time:                      " << download_elapsed_time << "s" << std::endl;
+        if (point_cloud_conversion_time > 0.0)
+            std::cout << std::fixed << std::setprecision(3)
+                    << "Point cloud to DEM conversion time: " << point_cloud_conversion_time << "s" << std::endl;
+        if (dem_processing_time > 0.0)
         {
-            if (settings.VERBOSE)
-                std::cout << "Updating QGIS project: " << settings.QGIS_PROJECT_FILE << std::endl;
-            update_qgis_project(qgis_ctx, settings, hillshade_out, sinkholes_out);
+            std::cout << std::fixed << std::setprecision(3)
+                    << "DEM processing time:                " << dem_processing_time << "s" << std::endl;
         }
+        if (qgis_layer_addition_time > 0.0)
+            std::cout << std::fixed << std::setprecision(3)
+                    << "QGIS layer addition time:           " << qgis_layer_addition_time << "s" << std::endl;
+        std::cout << std::fixed << std::setprecision(3)
+                    << "Total elapsed time:                 " << Seconds(time_finished - time_start).count() << "s" << std::endl;
     }
-    auto time_finished_processing_dems = Clock::now();
-    double processing_elapsed = Seconds(time_finished_processing_dems - time_start_processing_dem).count();
-
-    if (download_elapsed > 0.0)
-        std::cout << std::fixed << std::setprecision(3)
-                  << "Download time:                      " << download_elapsed << "s" << std::endl;
-    if (point_cloud_conversion_time > 0.0)
-        std::cout << std::fixed << std::setprecision(3)
-                  << "Point cloud to DEM conversion time: " << point_cloud_conversion_time << "s" << std::endl;
-    std::cout << std::fixed << std::setprecision(3)
-                  << "DEM processing time:                " << processing_elapsed << "s" << std::endl;
-    
-    std::cout << std::fixed << std::setprecision(3)
-                  << "Total elapsed time:                 " << Seconds(time_finished_processing_dems - time_start).count() << "s" << std::endl;
 
     return 0;
 }

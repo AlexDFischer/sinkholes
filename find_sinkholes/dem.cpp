@@ -48,8 +48,7 @@ void CDEM::set_value(int row,int col, float z)
 
 bool CDEM::is_NoData(int row, int col) const
 {
-	if (fabs(pDem[row*width+col]-NO_DATA_VALUE)<0.00001) return true;
-	return false;
+	return pDem[row*width+col] == NO_DATA_VALUE;
 }
 void CDEM::Assign_NoData()
 {

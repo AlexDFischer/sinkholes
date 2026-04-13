@@ -89,16 +89,16 @@ def main():
         description='Add sinkhole finder outputs to a QGIS project file.')
     parser.add_argument('project',
         help='Path to the QGIS project file (.qgz). Created if it does not exist.')
-    parser.add_argument('--sinkholes',
-        help='Sinkholes .geojson file to add as a vector layer.')
+    parser.add_argument('--sinkholes', nargs='+', metavar='FILE',
+        help='Sinkholes .geojson file(s) to add as vector layers.')
     parser.add_argument('--sinkholes-style',
-        help='QML style file to apply to the sinkholes layer.')
+        help='QML style file to apply to each sinkholes layer.')
     parser.add_argument('--sinkholes-group',
-        help='Layer group to add the sinkholes layer into.')
-    parser.add_argument('--hillshade',
-        help='Hillshade .tif file to add as a raster layer.')
-    parser.add_argument('--hillshade-group',
-        help='Layer group to add the hillshade layer into.')
+        help='Layer group to add the sinkholes layers into.')
+    parser.add_argument('--hillshades', nargs='+', metavar='FILE',
+        help='Hillshade .tif file(s) to add as raster layers.')
+    parser.add_argument('--hillshades-group',
+        help='Layer group to add the hillshade layers into.')
     args = parser.parse_args()
 
     if not args.sinkholes and not args.hillshade:
@@ -117,36 +117,38 @@ def main():
     root = project.layerTreeRoot()
 
     # ---------------------------------------------------------------------------
-    # Sinkholes vector layer
+    # Sinkholes vector layers
     # ---------------------------------------------------------------------------
     if args.sinkholes:
-        name = os.path.splitext(os.path.basename(args.sinkholes))[0]
-        layer = QgsVectorLayer(args.sinkholes, name, 'ogr')
-        if not layer.isValid():
-            print(f'Error: could not load sinkholes layer from {args.sinkholes}',
-                  file=sys.stderr)
-        else:
-            if args.sinkholes_style:
-                layer.loadNamedStyle(args.sinkholes_style)
-            project.addMapLayer(layer, False)
-            group = get_or_create_group(root, args.sinkholes_group) \
-                if args.sinkholes_group else root
-            group.addLayer(layer)
+        group = get_or_create_group(root, args.sinkholes_group) \
+            if args.sinkholes_group else root
+        for path in args.sinkholes:
+            name = os.path.splitext(os.path.basename(path))[0]
+            layer = QgsVectorLayer(path, name, 'ogr')
+            if not layer.isValid():
+                print(f'Error: could not load sinkholes layer from {path}',
+                      file=sys.stderr)
+            else:
+                if args.sinkholes_style:
+                    layer.loadNamedStyle(args.sinkholes_style)
+                project.addMapLayer(layer, False)
+                group.addLayer(layer)
 
     # ---------------------------------------------------------------------------
-    # Hillshade raster layer
+    # Hillshade raster layers
     # ---------------------------------------------------------------------------
-    if args.hillshade:
-        name = os.path.splitext(os.path.basename(args.hillshade))[0]
-        layer = QgsRasterLayer(args.hillshade, name)
-        if not layer.isValid():
-            print(f'Error: could not load hillshade layer from {args.hillshade}',
-                  file=sys.stderr)
-        else:
-            project.addMapLayer(layer, False)
-            group = get_or_create_group(root, args.hillshade_group) \
-                if args.hillshade_group else root
-            group.addLayer(layer)
+    if args.hillshades:
+        group = get_or_create_group(root, args.hillshades_group) \
+            if args.hillshades_group else root
+        for path in args.hillshades:
+            name = os.path.splitext(os.path.basename(path))[0]
+            layer = QgsRasterLayer(path, name)
+            if not layer.isValid():
+                print(f'Error: could not load hillshade layer from {path}',
+                      file=sys.stderr)
+            else:
+                project.addMapLayer(layer, False)
+                group.addLayer(layer)
 
     project.write()
     app.exitQgis()

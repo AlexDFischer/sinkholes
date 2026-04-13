@@ -127,22 +127,31 @@ QgisLaunchContext prepare_qgis_launch(const std::string& argv0)
 void update_qgis_project(
     const QgisLaunchContext& ctx,
     const Settings& settings,
-    const std::optional<std::string>& hillshade_out,
-    const std::optional<std::string>& sinkholes_out)
+    const std::vector<std::string>& hillshade_output_fnames,
+    const std::vector<std::string>& sinkholes_output_fnames)
 {
     std::ostringstream cmd;
     cmd << ctx.ld_library_path_prefix
         << ctx.python_exe << " " << q(ctx.script_path)
         << " " << q(settings.QGIS_PROJECT_FILE);
 
-    if (sinkholes_out)
-        cmd << " --sinkholes "       << q(*sinkholes_out)
-            << " --sinkholes-style " << q(settings.SINKHOLES_QGIS_STYLE_FILE)
-            << " --sinkholes-group " << q(settings.SINKHOLES_QGIS_GROUP_NAME);
+    if (!hillshade_output_fnames.empty())
+    {
+        cmd << " --hillshades";
+        for (const std::string& fname : hillshade_output_fnames)
+            cmd << " " << q(fname);
 
-    if (hillshade_out)
-        cmd << " --hillshade "       << q(*hillshade_out)
-            << " --hillshade-group " << q(settings.HILLSHADE_QGIS_GROUP_NAME);
+        cmd << " --hillshades-group " << q(settings.HILLSHADE_QGIS_GROUP_NAME);
+    }
+
+    if (!sinkholes_output_fnames.empty())
+    {
+        cmd << " --sinkholes";
+        for (const std::string& fname : sinkholes_output_fnames)
+            cmd << " " << q(fname);
+        cmd << " --sinkholes-group " << q(settings.SINKHOLES_QGIS_GROUP_NAME);
+        cmd << " --sinkholes-style " << q(settings.SINKHOLES_QGIS_STYLE_FILE);
+    }
 
     int ret = std::system(cmd.str().c_str());
     if (ret != 0)
