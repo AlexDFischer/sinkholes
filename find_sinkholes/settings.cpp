@@ -47,6 +47,7 @@ Settings Settings::from_json(const std::string& json_path)
         j.value("hillshade_z_factor",            DEFAULT_HILLSHADE_Z_FACTOR),
         j.value("hillshade_azimuth",             DEFAULT_HILLSHADE_AZIMUTH),
         j.value("hillshade_altitude",            DEFAULT_HILLSHADE_ALTITUDE),
+        j.value("hillshade_overview_levels",     DEFAULT_HILLSHADE_OVERVIEW_LEVELS),
         j.value("max_points_per_file",           DEFAULT_MAX_POINTS_PER_FILE),
         j.value("verbose",                       DEFAULT_VERBOSE),
         j.value("resolution",                    DEFAULT_RESOLUTION),

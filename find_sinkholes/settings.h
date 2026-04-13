@@ -37,6 +37,7 @@ class Settings
     static constexpr bool DEFAULT_VERBOSE = true;
     static constexpr float DEFAULT_RESOLUTION = 1.0f;
     inline static const std::vector<int> DEFAULT_POINT_CLOUD_CLASSIFICATIONS = {1, 2, 7, 9, 21};
+    inline static const std::vector<int> DEFAULT_HILLSHADE_OVERVIEW_LEVELS = {2, 4, 8, 16, 32};
     static const string DEFAULT_POINT_CLOUDS_DIR;
     static const string DEFAULT_DEMS_DIR;
     static const string DEFAULT_OUTPUT_DIR;
@@ -56,6 +57,7 @@ class Settings
     const float HILLSHADE_Z_FACTOR;
     const float HILLSHADE_AZIMUTH;
     const float HILLSHADE_ALTITUDE;
+    const std::vector<int> HILLSHADE_OVERVIEW_LEVELS;
     const int MAX_POINTS_PER_FILE;
     const bool VERBOSE;
     const float RESOLUTION;
@@ -78,6 +80,7 @@ class Settings
         float hillshade_z_factor = DEFAULT_HILLSHADE_Z_FACTOR,
         float hillshade_azimuth = DEFAULT_HILLSHADE_AZIMUTH,
         float hillshade_altitude = DEFAULT_HILLSHADE_ALTITUDE,
+        std::vector<int> hillshade_overview_levels = DEFAULT_HILLSHADE_OVERVIEW_LEVELS,
         int max_points_per_file = DEFAULT_MAX_POINTS_PER_FILE,
         bool verbose = DEFAULT_VERBOSE,
         float resolution = DEFAULT_RESOLUTION,
@@ -100,6 +103,7 @@ class Settings
         HILLSHADE_Z_FACTOR(hillshade_z_factor),
         HILLSHADE_AZIMUTH(hillshade_azimuth),
         HILLSHADE_ALTITUDE(hillshade_altitude),
+        HILLSHADE_OVERVIEW_LEVELS(std::move(hillshade_overview_levels)),
         MAX_POINTS_PER_FILE(max_points_per_file),
         VERBOSE(verbose),
         RESOLUTION(resolution),

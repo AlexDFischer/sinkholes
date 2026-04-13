@@ -589,7 +589,8 @@ static void write_rgb_tiff(
     int width,
     int height,
     const double* geo_transform,
-    const std::string& wkt)
+    const std::string& wkt,
+    const Settings& settings)
 {
     GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
     GDALDataset* ds = driver->Create(path.c_str(), width, height, 3, GDT_Byte, nullptr);
@@ -618,6 +619,13 @@ static void write_rgb_tiff(
                   << CPLGetLastErrorMsg() << std::endl;
         GDALClose(ds);
         return;
+    }
+
+    if (!settings.HILLSHADE_OVERVIEW_LEVELS.empty())
+    {
+        std::vector<int> levels = settings.HILLSHADE_OVERVIEW_LEVELS;
+        ds->BuildOverviews("AVERAGE", static_cast<int>(levels.size()), levels.data(),
+                           0, nullptr, GDALDummyProgress, nullptr);
     }
 
     GDALClose(ds);
@@ -660,7 +668,7 @@ void handle_dem(string input_fname, optional<string> output_hillshade_fname, opt
 	if (output_hillshade_fname.has_value())
 	{
 		write_rgb_tiff(output_hillshade_fname.value(), hillshade_rgb,
-			dem.Get_NX(), dem.Get_NY(), geoTransofrmArgs, wkt);
+			dem.Get_NX(), dem.Get_NY(), geoTransofrmArgs, wkt, settings);
 		if (settings.VERBOSE)
 		{
 			std::cout << "Finished writing hillshade to " << output_hillshade_fname.value() << "." << std::endl;
