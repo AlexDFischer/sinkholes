@@ -58,7 +58,9 @@ The default colormap is rainbow_4 (reversed) from [colorcet](https://colorcet.co
 
 Rainbow colormap with more contrast and brightness, but less perceptual uniformity.
 
-![Viridis colormap with less contrast between different depths, and less brightness to stand out against a grey hillshade backgroud, but more perceptually uniform](docs/viridis_colormap.png).
+![Viridis colormap with less contrast between different depths, and less brightness to stand out against a grey hillshade backgroud, but more perceptually uniform](docs/viridis_colormap.png)
+
+Viridis colormap with less contrast between different depths, and less brightness to stand out against a grey hillshade backgroud, but more perceptually uniform.
 
 The above colormaps have a logarithmic relationship with depth. The colormap, and the parameters of the log scale, can be changed by making a settings file and applying it with `-s`/`--settings`. The default settings file is at `settings.json`.
 
