@@ -52,8 +52,29 @@ For those outside the US, I don't know what data is generally available. Use poi
 
 ## A note on colormaps
 
-The default colormap is rainbow_4 (reversed) from [colorcet](https://colorcet.com/gallery.html#rainbow). Rainbow colormaps are not [perceptually uniform](https://programmingdesignsystems.com/color/perceptually-uniform-color-spaces/) and are often not recommended for visualizing 3D objects like how they are being used here. However, I have chose to use a rainbow colormap anyways, because I care less about the perceptual uniformity of the sinkhole depth visualizations, and more about the visual contrast against the grey background and the range of depth values that can be distinguished. Rainbow colormaps are superior to standard perceptualy uniform colormaps at those tasks. See below.
+The default colormap is rainbow_4 (reversed) from [colorcet](https://colorcet.com/gallery.html#rainbow). Rainbow colormaps are not [perceptually uniform](https://programmingdesignsystems.com/color/perceptually-uniform-color-spaces/) and are often not recommended for visualizing 3D objects like how they are being used here. However, I have chose to use a rainbow colormap anyways, because I care less about the perceptual uniformity of the sinkhole depth visualizations, and more about the visual contrast against the grey background and the range of depth values that can be distinguished. Rainbow colormaps are superior to standard perceptualy uniform colormaps at those tasks. See below; the rainbow colormap has much more contrast between different depths, although it is less perceptually uniform than colormaps like Viridis. The colormap can be changed to other colormaps in a settigns file (which can be applied with a `-s`/`--settings` flag).
+
+![Rainbow colormap with more contrast and brightness, but less perceptual uniformity](docs/rainbow_colormap.png)
+
+Rainbow colormap with more contrast and brightness, but less perceptual uniformity.
+
+![Viridis colormap with less contrast between different depths, and less brightness to stand out against a grey hillshade backgroud, but more perceptually uniform](docs/viridis_colormap.png).
+
+The above colormaps have a logarithmic relationship with depth. The colormap, and the parameters of the log scale, can be changed by making a settings file and applying it with `-s`/`--settings`. The default settings file is at `settings.json`.
+
+The currently available colormaps are listed below. All are from the [`matplotlib` colormap library](https://matplotlib.org/stable/users/explain/colors/colormaps.html) unless otherwise noted.
+ * `rainbow_4_reverse`  from [colorcet](https://colorcet.com/gallery.html#rainbow).
+ * `gist_rainbow`.
+ * `viridis_reverse`.
+ * `plasla_reverse`.
+ * `spring_reverse`.
+ * `winter_reverse`.
+ * `cool`.
 
 # Included QGIS template
 
-I have included a QGIS project in the `qgis_template` directory. This project file has several layers one will find useful for cave-hunting: 
+I have included a QGIS project in the `qgis_template` directory. This project file has several layers one will find useful for cave-hunting:
+ * Google Maps satellite view.
+ * Bedrock geology info from [Macrostrat](https://macrostrat.org/).
+ * US National Map.
+ * OpenStreetMap.
