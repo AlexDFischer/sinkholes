@@ -89,4 +89,7 @@ I'd like to add the [USA karst database from the USGS](https://pubs.usgs.gov/of/
 # To do list
 
  * Do something intelligent at the edges of point clouds or DEMs. Stitch them together somehow?
+ * Use [the USGS's "requestor pays" AWS S3 bucket](https://registry.opendata.aws/usgs-lidar/) to download point clouds, because the free GIS data download service is often down.
  * A GUI and an installer to make the user experience nicer (just vibe code them).
+ * Tools to automatically download data from other countries. I welcome contributions from cavers from around the world.
+ * ArcGIS integration support? It would have to come from someone who pays for ArcGIS, so not me.
