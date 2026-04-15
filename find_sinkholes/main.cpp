@@ -255,9 +255,11 @@ int main(int argc, char** argv)
 {
     argparse::ArgumentParser program("find_sinkholes", "0.1.0");
     program.add_argument("-ll", "--bbox-lower-left")
-        .help("Lower-left corner of bounding box to download LiDAR from: latitude,longitude");
+        .help("Lower-left corner of bounding box: 'lat,lon'  or  'lat lon'")
+        .nargs(1, 2);
     program.add_argument("-ur", "--bbox-upper-right")
-        .help("Upper-right corner of bounding box to download LiDAR from: latitude,longitude");
+        .help("Upper-right corner of bounding box: 'lat,lon'  or  'lat lon'")
+        .nargs(1, 2);
     program.add_argument("-pc", "--point-clouds")
         .help("Point cloud .laz/.las file(s) to convert to DEMs and process")
         .nargs(argparse::nargs_pattern::any);
@@ -315,14 +317,23 @@ int main(int argc, char** argv)
     // 1. Download from bbox → convert to DEMs
     if (program.is_used("--bbox-lower-left") && program.is_used("--bbox-upper-right"))
     {
-        auto parse_latlon = [](const std::string& s) -> std::pair<double, double> {
-            size_t comma = s.find(',');
-            return {std::stod(s.substr(0, comma)), std::stod(s.substr(comma + 1))};
+        auto parse_latlon = [](const std::vector<std::string>& tokens) -> std::pair<double, double> {
+            if (tokens.size() == 2)
+                return {std::stod(tokens[0]), std::stod(tokens[1])};
+            // Single token: split on comma or space
+            const std::string& s = tokens[0];
+            size_t sep = s.find(',');
+            if (sep == std::string::npos)
+                sep = s.find(' ');
+            if (sep == std::string::npos)
+                throw std::runtime_error("Could not parse lat/lon '" + s + "': expected 'lat,lon' or 'lat lon'");
+            return {std::stod(s.substr(0, sep)), std::stod(s.substr(sep + 1))};
         };
 
-        auto [ll_lat, ll_lon] = parse_latlon(program.get<std::string>("--bbox-lower-left"));
-        auto [ur_lat, ur_lon] = parse_latlon(program.get<std::string>("--bbox-upper-right"));
-        auto downloaded = download_point_clouds(ll_lat, ll_lon, ur_lat, ur_lon, settings, "response.json");
+        auto [lower_left_latitude, lower_left_longitude] = parse_latlon(program.get<std::vector<std::string>>("--bbox-lower-left"));
+        auto [upper_right_latitude, upper_right_longitude] = parse_latlon(program.get<std::vector<std::string>>("--bbox-upper-right"));
+
+        auto downloaded = download_point_clouds(lower_left_latitude, lower_left_longitude, upper_right_latitude, upper_right_longitude, settings, "response.json");
 
         auto time_finished_downloads = Clock::now();
         download_elapsed_time = Seconds(time_finished_downloads - time_start).count();
