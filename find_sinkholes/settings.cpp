@@ -21,15 +21,6 @@
 
 using namespace std;
 
-const std::string Settings::DEFAULT_COLORMAP        = "rainbow_4_reverse";
-const std::string Settings::DEFAULT_POINT_CLOUDS_DIR = "point_clouds";
-const std::string Settings::DEFAULT_DEMS_DIR         = "dems";
-const std::string Settings::DEFAULT_OUTPUT_DIR       = "output";
-const std::string Settings::DEFAULT_SINKHOLES_QGIS_STYLE_FILE = "qgis_template/sinkholes_layer_style.qml";
-const std::string Settings::DEFAULT_QGIS_PROJECT_FILE         = "qgis_template/template.qgz";
-const std::string Settings::DEFAULT_SINKHOLES_QGIS_GROUP_NAME = "sinkholes";
-const std::string Settings::DEFAULT_HILLSHADE_QGIS_GROUP_NAME = "hillshades";
-
 Settings Settings::from_json(const std::string& json_path)
 {
     std::ifstream f(json_path);
@@ -39,27 +30,29 @@ Settings Settings::from_json(const std::string& json_path)
     f >> j;
 
     return Settings(
-        j.value("min_sinkhole_depth",            DEFAULT_MIN_SINKHOLE_DEPTH),
-        j.value("min_sinkhole_area",             DEFAULT_MIN_SINKHOLE_AREA),
-        j.value("min_depth_for_colormap",        DEFAULT_MIN_DEPTH_FOR_COLORMAP),
-        j.value("max_depth_for_colormap",        DEFAULT_MAX_DEPTH_FOR_COLORMAP),
-        j.value("colormap",                      DEFAULT_COLORMAP),
-        j.value("hillshade_z_factor",            DEFAULT_HILLSHADE_Z_FACTOR),
-        j.value("hillshade_azimuth",             DEFAULT_HILLSHADE_AZIMUTH),
-        j.value("hillshade_altitude",            DEFAULT_HILLSHADE_ALTITUDE),
-        j.value("hillshade_overview_levels",     DEFAULT_HILLSHADE_OVERVIEW_LEVELS),
-        j.value("max_points_per_file",           DEFAULT_MAX_POINTS_PER_FILE),
-        j.value("verbose",                       DEFAULT_VERBOSE),
-        j.value("resolution",                    DEFAULT_RESOLUTION),
-        j.value("point_cloud_classifications",   DEFAULT_POINT_CLOUD_CLASSIFICATIONS),
-        j.value("point_clouds_dir",              DEFAULT_POINT_CLOUDS_DIR),
-        j.value("dems_dir",                      DEFAULT_DEMS_DIR),
-        j.value("output_dir",                    DEFAULT_OUTPUT_DIR),
-        j.value("sinkholes_qgis_style_file",     DEFAULT_SINKHOLES_QGIS_STYLE_FILE),
-        j.value("qgis_project_file",             DEFAULT_QGIS_PROJECT_FILE),
-        j.value("sinkholes_qgis_group_name",     DEFAULT_SINKHOLES_QGIS_GROUP_NAME),
-        j.value("hillshade_qgis_group_name",     DEFAULT_HILLSHADE_QGIS_GROUP_NAME),
-        j.value("nodata_value",                  DEFAULT_NODATA_VALUE)
+        j.at("min_sinkhole_depth")           .get<float>(),
+        j.at("min_sinkhole_area")            .get<float>(),
+        j.at("min_depth_for_colormap")       .get<float>(),
+        j.at("max_depth_for_colormap")       .get<float>(),
+        j.at("colormap")                     .get<std::string>(),
+        j.at("hillshade_z_factor")           .get<float>(),
+        j.at("hillshade_azimuth")            .get<float>(),
+        j.at("hillshade_altitude")           .get<float>(),
+        j.at("hillshade_overview_levels")    .get<std::vector<int>>(),
+        j.at("max_points_per_file")          .get<int>(),
+        j.at("verbose")                      .get<bool>(),
+        j.at("resolution")                   .get<float>(),
+        j.at("point_cloud_classifications")  .get<std::vector<int>>(),
+        j.at("point_clouds_dir")             .get<std::string>(),
+        j.at("dems_dir")                     .get<std::string>(),
+        j.at("output_dir")                   .get<std::string>(),
+        j.at("sinkholes_qgis_style_file")    .get<std::string>(),
+        j.at("qgis_project_file")            .get<std::string>(),
+        j.at("qgis_python_path")             .get<std::string>(),
+        j.at("python_executable")            .get<std::string>(),
+        j.at("sinkholes_qgis_group_name")    .get<std::string>(),
+        j.at("hillshade_qgis_group_name")    .get<std::string>(),
+        j.at("nodata_value")                 .get<float>()
     );
 }
 

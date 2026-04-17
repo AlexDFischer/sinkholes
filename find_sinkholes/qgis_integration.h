@@ -26,6 +26,7 @@ struct QgisLaunchContext
     std::string python_exe;
     std::string script_path;
     std::string ld_library_path_prefix; // empty if not needed
+    std::string qgis_python_path;       // empty = let script auto-detect
 
     bool valid() const { return !python_exe.empty(); }
 };
@@ -34,7 +35,7 @@ struct QgisLaunchContext
 // required LD_LIBRARY_PATH prefix. argv0 is used to locate
 // add_to_qgis_project.py relative to the binary.
 // Returns a context where valid() == false if no QGIS installation is found.
-QgisLaunchContext prepare_qgis_launch(const std::string& argv0);
+QgisLaunchContext prepare_qgis_launch(const std::string& argv0, const Settings& settings);
 
 // Runs add_to_qgis_project.py to add the given outputs to the QGIS project
 // specified in settings.

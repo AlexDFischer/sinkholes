@@ -94,13 +94,48 @@ static std::string q(const std::string& s) { return "\"" + s + "\""; }
 // Public functions
 // ---------------------------------------------------------------------------
 
-QgisLaunchContext prepare_qgis_launch(const std::string& argv0)
+// Returns the QGIS Python API directory to pass to the script, or an empty
+// string to let the script auto-detect it.
+static std::string resolve_qgis_python_path(const Settings& settings)
+{
+    return settings.QGIS_PYTHON_PATH;
+}
+
+// Returns the Python executable to use when launching the script.
+// Priority: explicit setting > derived from QGIS_PYTHON_PATH > auto-detection.
+// Returns an empty string if no suitable Python can be found.
+static std::string resolve_python_executable(const Settings& settings)
+{
+    if (!settings.PYTHON_EXECUTABLE.empty())
+        return settings.PYTHON_EXECUTABLE;
+
+    if (!settings.QGIS_PYTHON_PATH.empty())
+    {
+#if defined(__APPLE__)
+        // Typical Mac path: /Applications/QGIS.app/Contents/Resources/python
+        // Python lives at:  /Applications/QGIS.app/Contents/MacOS/bin/python3
+        fs::path p = fs::path(settings.QGIS_PYTHON_PATH);
+        while (!p.empty() && p.filename() != "Contents")
+            p = p.parent_path();
+        fs::path candidate = p / "MacOS" / "bin" / "python3";
+        return fs::exists(candidate) ? candidate.string() : "/usr/bin/python3";
+#else
+        return "/usr/bin/python3";
+#endif
+    }
+
+    return find_qgis_python_executable();
+}
+
+QgisLaunchContext prepare_qgis_launch(const std::string& argv0, const Settings& settings)
 {
     QgisLaunchContext ctx;
 
-    ctx.python_exe = find_qgis_python_executable();
+    ctx.qgis_python_path = resolve_qgis_python_path(settings);
+    ctx.python_exe = resolve_python_executable(settings);
+
     if (ctx.python_exe.empty())
-        return ctx;
+        return ctx; // valid() == false
 
     ctx.script_path = (fs::path(argv0).parent_path() / "add_to_qgis_project.py").string();
 
@@ -134,6 +169,9 @@ void update_qgis_project(
     cmd << ctx.ld_library_path_prefix
         << ctx.python_exe << " " << q(ctx.script_path)
         << " " << q(settings.QGIS_PROJECT_FILE);
+
+    if (!ctx.qgis_python_path.empty())
+        cmd << " --qgis-python-path " << q(ctx.qgis_python_path);
 
     if (!hillshade_output_fnames.empty())
     {

@@ -54,6 +54,4 @@ build/qgis_integration.o: $(SRC)/qgis_integration.cpp $(SRC)/qgis_integration.h 
 bin build:
 	mkdir -p $@
 
-clean:
-	rm -rf build bin
 .PHONY: all clean

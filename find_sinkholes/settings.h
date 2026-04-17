@@ -25,29 +25,6 @@ using namespace std;
 class Settings
 {
     public:
-    static constexpr float DEFAULT_MIN_SINKHOLE_DEPTH = 0.3f;
-    static constexpr float DEFAULT_MIN_SINKHOLE_AREA = 0.0f;
-    static constexpr float DEFAULT_MIN_DEPTH_FOR_COLORMAP = 0.3f;
-    static constexpr float DEFAULT_MAX_DEPTH_FOR_COLORMAP = 6.0f;
-    static const string DEFAULT_COLORMAP;
-    static constexpr float DEFAULT_HILLSHADE_Z_FACTOR = 1.0f;
-    static constexpr float DEFAULT_HILLSHADE_AZIMUTH = 315.0f;
-    static constexpr float DEFAULT_HILLSHADE_ALTITUDE = 30.0f;
-    static constexpr int DEFAULT_MAX_POINTS_PER_FILE = -1;
-    static constexpr bool DEFAULT_VERBOSE = true;
-    static constexpr float DEFAULT_RESOLUTION = 1.0f;
-    inline static const std::vector<int> DEFAULT_POINT_CLOUD_CLASSIFICATIONS = {1, 2, 7, 9, 21};
-    inline static const std::vector<int> DEFAULT_HILLSHADE_OVERVIEW_LEVELS = {2, 4, 8, 16, 32};
-    static const string DEFAULT_POINT_CLOUDS_DIR;
-    static const string DEFAULT_DEMS_DIR;
-    static const string DEFAULT_OUTPUT_DIR;
-    static const string DEFAULT_SINKHOLES_QGIS_STYLE_FILE;
-    static const string DEFAULT_QGIS_PROJECT_FILE;
-    static const string DEFAULT_SINKHOLES_QGIS_GROUP_NAME;
-    static const string DEFAULT_HILLSHADE_QGIS_GROUP_NAME;
-    static constexpr float DEFAULT_NODATA_VALUE = -9999.0f;
-
-    public:
     const float MIN_SINKHOLE_DEPTH;
     const float MIN_SINKHOLE_AREA;
     const float MIN_DEPTH_FOR_COLORMAP;
@@ -67,32 +44,36 @@ class Settings
     const string OUTPUT_DIR;
     const string SINKHOLES_QGIS_STYLE_FILE;
     string QGIS_PROJECT_FILE;
+    const string QGIS_PYTHON_PATH;
+    const string PYTHON_EXECUTABLE;
     const string SINKHOLES_QGIS_GROUP_NAME;
     const string HILLSHADE_QGIS_GROUP_NAME;
     const float NODATA_VALUE;
 
     Settings(
-        float min_sinkhole_depth = DEFAULT_MIN_SINKHOLE_DEPTH,
-        float min_sinkhole_area = DEFAULT_MIN_SINKHOLE_AREA,
-        float min_depth_for_colormap = DEFAULT_MIN_DEPTH_FOR_COLORMAP,
-        float max_depth_for_colormap = DEFAULT_MAX_DEPTH_FOR_COLORMAP,
-        const string colormap = DEFAULT_COLORMAP,
-        float hillshade_z_factor = DEFAULT_HILLSHADE_Z_FACTOR,
-        float hillshade_azimuth = DEFAULT_HILLSHADE_AZIMUTH,
-        float hillshade_altitude = DEFAULT_HILLSHADE_ALTITUDE,
-        std::vector<int> hillshade_overview_levels = DEFAULT_HILLSHADE_OVERVIEW_LEVELS,
-        int max_points_per_file = DEFAULT_MAX_POINTS_PER_FILE,
-        bool verbose = DEFAULT_VERBOSE,
-        float resolution = DEFAULT_RESOLUTION,
-        std::vector<int> point_cloud_classifications = DEFAULT_POINT_CLOUD_CLASSIFICATIONS,
-        string point_clouds_dir = DEFAULT_POINT_CLOUDS_DIR,
-        string dems_dir = DEFAULT_DEMS_DIR,
-        string output_dir = DEFAULT_OUTPUT_DIR,
-        string sinkholes_qgis_style_file = DEFAULT_SINKHOLES_QGIS_STYLE_FILE,
-        string qgis_project_file = DEFAULT_QGIS_PROJECT_FILE,
-        string sinkholes_qgis_group_name = DEFAULT_SINKHOLES_QGIS_GROUP_NAME,
-        string hillshade_qgis_group_name = DEFAULT_HILLSHADE_QGIS_GROUP_NAME,
-        float nodata_value = DEFAULT_NODATA_VALUE
+        float min_sinkhole_depth,
+        float min_sinkhole_area,
+        float min_depth_for_colormap,
+        float max_depth_for_colormap,
+        const string colormap,
+        float hillshade_z_factor,
+        float hillshade_azimuth,
+        float hillshade_altitude,
+        std::vector<int> hillshade_overview_levels,
+        int max_points_per_file,
+        bool verbose,
+        float resolution,
+        std::vector<int> point_cloud_classifications,
+        string point_clouds_dir,
+        string dems_dir,
+        string output_dir,
+        string sinkholes_qgis_style_file,
+        string qgis_project_file,
+        string qgis_python_path,
+        string python_executable,
+        string sinkholes_qgis_group_name,
+        string hillshade_qgis_group_name,
+        float nodata_value
     )
         : MIN_SINKHOLE_DEPTH(min_sinkhole_depth),
         MIN_SINKHOLE_AREA(min_sinkhole_area),
@@ -113,6 +94,8 @@ class Settings
         OUTPUT_DIR(std::move(output_dir)),
         SINKHOLES_QGIS_STYLE_FILE(std::move(sinkholes_qgis_style_file)),
         QGIS_PROJECT_FILE(std::move(qgis_project_file)),
+        QGIS_PYTHON_PATH(std::move(qgis_python_path)),
+        PYTHON_EXECUTABLE(std::move(python_executable)),
         SINKHOLES_QGIS_GROUP_NAME(std::move(sinkholes_qgis_group_name)),
         HILLSHADE_QGIS_GROUP_NAME(std::move(hillshade_qgis_group_name)),
         NODATA_VALUE(nodata_value)

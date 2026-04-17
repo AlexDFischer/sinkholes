@@ -17,6 +17,8 @@
     "output_dir": "output",
     "sinkholes_qgis_style_file": "qgis_template/sinkholes_layer_style.qml",
     "qgis_project_file": "qgis_template/template.qgz",
+    "qgis_python_path": "",
+    "python_executable": "",
     "sinkholes_qgis_group_name": "sinkholes",
     "hillshade_qgis_group_name": "hillshades",
     "nodata_value": -9999.0

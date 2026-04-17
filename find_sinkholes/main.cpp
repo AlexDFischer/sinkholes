@@ -288,9 +288,11 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Settings settings = program.is_used("--settings")
-        ? Settings::from_json(program.get<std::string>("--settings"))
-        : Settings();
+    std::string settings_path = program.is_used("--settings")
+        ? program.get<std::string>("--settings")
+        : (fs::path(argv[0]).parent_path() / "default_settings.json").string();
+
+    Settings settings = Settings::from_json(settings_path);
 
     if (program.is_used("--qgis"))
         settings.QGIS_PROJECT_FILE = program.get<std::string>("--qgis");
@@ -333,7 +335,7 @@ int main(int argc, char** argv)
         auto [lower_left_latitude, lower_left_longitude] = parse_latlon(program.get<std::vector<std::string>>("--bbox-lower-left"));
         auto [upper_right_latitude, upper_right_longitude] = parse_latlon(program.get<std::vector<std::string>>("--bbox-upper-right"));
 
-        auto downloaded = download_point_clouds(lower_left_latitude, lower_left_longitude, upper_right_latitude, upper_right_longitude, settings, "response.json");
+        auto downloaded = download_point_clouds(lower_left_latitude, lower_left_longitude, upper_right_latitude, upper_right_longitude, settings);
 
         auto time_finished_downloads = Clock::now();
         download_elapsed_time = Seconds(time_finished_downloads - time_start).count();
@@ -439,7 +441,7 @@ int main(int argc, char** argv)
     QgisLaunchContext qgis_ctx;
     if (use_qgis)
     {
-        qgis_ctx = prepare_qgis_launch(argv[0]);
+        qgis_ctx = prepare_qgis_launch(argv[0], settings);
         if (qgis_ctx.valid())
         {
             if (settings.VERBOSE)
